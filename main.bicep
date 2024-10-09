@@ -18,8 +18,6 @@ param falconClientId string
 param falconClientSecret string
 
 var keyVaultName = 'kv-cspm-${uniqueString(resourceGroupName)}'
-var subscriptionId = subscription().subscriptionId
-
 
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
