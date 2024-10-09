@@ -1,0 +1,813 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "languageVersion": "2.1-experimental",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
+    "_EXPERIMENTAL_FEATURES_ENABLED": [
+      "Extensibility"
+    ],
+    "_generator": {
+      "name": "bicep",
+      "version": "0.30.23.60470",
+      "templateHash": "12660240593967170372"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[deployment().location]",
+      "metadata": {
+        "description": "The location for the resources deployed in this solution."
+      }
+    },
+    "deploymentNameSuffix": {
+      "type": "string",
+      "defaultValue": "[utcNow()]",
+      "metadata": {
+        "description": "The suffix to be added to the deployment name."
+      }
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "defaultValue": "rg-cs-cspm",
+      "metadata": {
+        "description": "The name of the resource group."
+      }
+    },
+    "falconClientId": {
+      "type": "string",
+      "metadata": {
+        "description": "The client ID for the Falcon API."
+      }
+    },
+    "falconClientSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The client secret for the Falcon API."
+      }
+    }
+  },
+  "variables": {
+    "keyVaultName": "[format('kv-cspm-{0}', uniqueString(parameters('resourceGroupName')))]",
+    "subscriptionId": "[subscription().subscriptionId]"
+  },
+  "resources": {
+    "rg": {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('resourceGroupName')]",
+      "location": "[parameters('location')]"
+    },
+    "appRegistration": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('appreg-deployment-{0}', parameters('deploymentNameSuffix'))]",
+      "location": "[deployment().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appName": {
+            "value": "crowdstrike"
+          },
+          "deployEnvironment": {
+            "value": "cspm"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "languageVersion": "2.1-experimental",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
+            "_EXPERIMENTAL_FEATURES_ENABLED": [
+              "Extensibility"
+            ],
+            "_generator": {
+              "name": "bicep",
+              "version": "0.30.23.60470",
+              "templateHash": "10792277004619923479"
+            }
+          },
+          "parameters": {
+            "appName": {
+              "type": "string",
+              "defaultValue": "crowdstrike"
+            },
+            "deployEnvironment": {
+              "type": "string",
+              "defaultValue": "cspm"
+            }
+          },
+          "variables": {
+            "applicationRegistrationName": "[format('{0}-{1}-app', parameters('appName'), parameters('deployEnvironment'))]",
+            "redirectUris": [
+              "https://localhost"
+            ]
+          },
+          "imports": {
+            "microsoftGraph": {
+              "provider": "MicrosoftGraph",
+              "version": "1.0.0"
+            }
+          },
+          "resources": {
+            "microsoftGraphServicePrincipal": {
+              "existing": true,
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/servicePrincipals@v1.0",
+              "properties": {
+                "appId": "00000003-0000-0000-c000-000000000000"
+              }
+            },
+            "applicationRegistration": {
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/applications@v1.0",
+              "properties": {
+                "uniqueName": "[variables('applicationRegistrationName')]",
+                "displayName": "[variables('applicationRegistrationName')]",
+                "web": {
+                  "copy": [
+                    {
+                      "name": "redirectUris",
+                      "count": "[length(variables('redirectUris'))]",
+                      "input": "[format('{0}/sigin-oidc', variables('redirectUris')[copyIndex('redirectUris')])]"
+                    }
+                  ],
+                  "implicitGrantSettings": {
+                    "enableIdTokenIssuance": true
+                  }
+                },
+                "requiredResourceAccess": [
+                  {
+                    "resourceAppId": "[reference('microsoftGraphServicePrincipal').appId]",
+                    "resourceAccess": [
+                      {
+                        "id": "df021288-bdef-4463-88db-98f22de89214",
+                        "type": "Role"
+                      },
+                      {
+                        "id": "aec28ec7-4d02-4e8c-b864-50163aea77eb",
+                        "type": "Scope"
+                      },
+                      {
+                        "id": "49f0cc30-024c-4dfd-ab3e-82e137ee5431",
+                        "type": "Scope"
+                      },
+                      {
+                        "id": "230c1aed-a721-4c5d-9cb4-a90514e508ef",
+                        "type": "Role"
+                      },
+                      {
+                        "id": "246dd0d5-5bd0-4def-940b-0421030a5b68",
+                        "type": "Role"
+                      },
+                      {
+                        "id": "483bed4a-2ad3-4361-a73b-c83ccdbdc53c",
+                        "type": "Role"
+                      },
+                      {
+                        "id": "5b567255-7703-4780-807c-7be8301ae99b",
+                        "type": "Role"
+                      },
+                      {
+                        "id": "7ab1d382-f21e-4acd-a863-ba3e13f7da61",
+                        "type": "Role"
+                      },
+                      {
+                        "id": "9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30",
+                        "type": "Role"
+                      },
+                      {
+                        "id": "b0afded3-3588-46d8-8b3d-9842eff778da",
+                        "type": "Role"
+                      },
+                      {
+                        "id": "97235f07-e226-4f63-ace3-39588e11d3a1",
+                        "type": "Role"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "dependsOn": [
+                "microsoftGraphServicePrincipal"
+              ]
+            },
+            "applicationRegistrationServicePrincipal": {
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/servicePrincipals@v1.0",
+              "properties": {
+                "appId": "[reference('applicationRegistration').appId]"
+              },
+              "dependsOn": [
+                "applicationRegistration"
+              ]
+            },
+            "delegatedGrants": {
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/oauth2PermissionGrants@v1.0",
+              "properties": {
+                "clientId": "[reference('applicationRegistrationServicePrincipal').id]",
+                "consentType": "AllPrincipals",
+                "resourceId": "[reference('microsoftGraphServicePrincipal').id]",
+                "scope": "UserAuthenticationMethod.Read.All DeviceManagementRBAC.Read.All"
+              },
+              "dependsOn": [
+                "applicationRegistrationServicePrincipal",
+                "microsoftGraphServicePrincipal"
+              ]
+            },
+            "userReadAll": {
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/appRoleAssignedTo@v1.0",
+              "properties": {
+                "principalId": "[reference('applicationRegistrationServicePrincipal').id]",
+                "resourceId": "[reference('microsoftGraphServicePrincipal').id]",
+                "appRoleId": "df021288-bdef-4463-88db-98f22de89214"
+              },
+              "dependsOn": [
+                "applicationRegistrationServicePrincipal",
+                "microsoftGraphServicePrincipal"
+              ]
+            },
+            "reportsReadAll": {
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/appRoleAssignedTo@v1.0",
+              "properties": {
+                "principalId": "[reference('applicationRegistrationServicePrincipal').id]",
+                "resourceId": "[reference('microsoftGraphServicePrincipal').id]",
+                "appRoleId": "230c1aed-a721-4c5d-9cb4-a90514e508ef"
+              },
+              "dependsOn": [
+                "applicationRegistrationServicePrincipal",
+                "microsoftGraphServicePrincipal"
+              ]
+            },
+            "policyReadAll": {
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/appRoleAssignedTo@v1.0",
+              "properties": {
+                "principalId": "[reference('applicationRegistrationServicePrincipal').id]",
+                "resourceId": "[reference('microsoftGraphServicePrincipal').id]",
+                "appRoleId": "246dd0d5-5bd0-4def-940b-0421030a5b68"
+              },
+              "dependsOn": [
+                "applicationRegistrationServicePrincipal",
+                "microsoftGraphServicePrincipal"
+              ]
+            },
+            "roleManagementReadDirectory": {
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/appRoleAssignedTo@v1.0",
+              "properties": {
+                "principalId": "[reference('applicationRegistrationServicePrincipal').id]",
+                "resourceId": "[reference('microsoftGraphServicePrincipal').id]",
+                "appRoleId": "483bed4a-2ad3-4361-a73b-c83ccdbdc53c"
+              },
+              "dependsOn": [
+                "applicationRegistrationServicePrincipal",
+                "microsoftGraphServicePrincipal"
+              ]
+            },
+            "groupReadAll": {
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/appRoleAssignedTo@v1.0",
+              "properties": {
+                "principalId": "[reference('applicationRegistrationServicePrincipal').id]",
+                "resourceId": "[reference('microsoftGraphServicePrincipal').id]",
+                "appRoleId": "5b567255-7703-4780-807c-7be8301ae99b"
+              },
+              "dependsOn": [
+                "applicationRegistrationServicePrincipal",
+                "microsoftGraphServicePrincipal"
+              ]
+            },
+            "directoryReadAll": {
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/appRoleAssignedTo@v1.0",
+              "properties": {
+                "principalId": "[reference('applicationRegistrationServicePrincipal').id]",
+                "resourceId": "[reference('microsoftGraphServicePrincipal').id]",
+                "appRoleId": "7ab1d382-f21e-4acd-a863-ba3e13f7da61"
+              },
+              "dependsOn": [
+                "applicationRegistrationServicePrincipal",
+                "microsoftGraphServicePrincipal"
+              ]
+            },
+            "applicationReadAll": {
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/appRoleAssignedTo@v1.0",
+              "properties": {
+                "principalId": "[reference('applicationRegistrationServicePrincipal').id]",
+                "resourceId": "[reference('microsoftGraphServicePrincipal').id]",
+                "appRoleId": "9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30"
+              },
+              "dependsOn": [
+                "applicationRegistrationServicePrincipal",
+                "microsoftGraphServicePrincipal"
+              ]
+            },
+            "auditLogReadAll": {
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/appRoleAssignedTo@v1.0",
+              "properties": {
+                "principalId": "[reference('applicationRegistrationServicePrincipal').id]",
+                "resourceId": "[reference('microsoftGraphServicePrincipal').id]",
+                "appRoleId": "b0afded3-3588-46d8-8b3d-9842eff778da"
+              },
+              "dependsOn": [
+                "applicationRegistrationServicePrincipal",
+                "microsoftGraphServicePrincipal"
+              ]
+            },
+            "userReadBasicAll": {
+              "import": "microsoftGraph",
+              "type": "Microsoft.Graph/appRoleAssignedTo@v1.0",
+              "properties": {
+                "principalId": "[reference('applicationRegistrationServicePrincipal').id]",
+                "resourceId": "[reference('microsoftGraphServicePrincipal').id]",
+                "appRoleId": "97235f07-e226-4f63-ace3-39588e11d3a1"
+              },
+              "dependsOn": [
+                "applicationRegistrationServicePrincipal",
+                "microsoftGraphServicePrincipal"
+              ]
+            }
+          },
+          "outputs": {
+            "applicationRegistrationId": {
+              "type": "string",
+              "value": "[reference('applicationRegistration').id]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference('applicationRegistrationServicePrincipal').id]"
+            },
+            "appId": {
+              "type": "string",
+              "value": "[reference('applicationRegistration').appId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "rg"
+      ]
+    },
+    "script": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('cs-account-deployment-{0}', parameters('deploymentNameSuffix'))]",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "falconClientId": {
+            "value": "[parameters('falconClientId')]"
+          },
+          "falconClientSecret": {
+            "value": "[parameters('falconClientSecret')]"
+          },
+          "appRegistration": {
+            "value": "[reference('appRegistration').outputs.appId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "languageVersion": "2.1-experimental",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
+            "_EXPERIMENTAL_FEATURES_ENABLED": [
+              "Extensibility"
+            ],
+            "_generator": {
+              "name": "bicep",
+              "version": "0.30.23.60470",
+              "templateHash": "15943825816953873150"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]"
+            },
+            "falconClientId": {
+              "type": "string"
+            },
+            "falconClientSecret": {
+              "type": "securestring"
+            },
+            "appRegistration": {
+              "type": "string"
+            }
+          },
+          "resources": {
+            "azureAccount": {
+              "type": "Microsoft.Resources/deploymentScripts",
+              "apiVersion": "2023-08-01",
+              "name": "cs-account-deployment",
+              "location": "[parameters('location')]",
+              "kind": "AzurePowerShell",
+              "properties": {
+                "azPowerShellVersion": "10.0",
+                "cleanupPreference": "OnSuccess",
+                "retentionInterval": "P1D",
+                "arguments": "[format('-clientId {0} -clientSecret {1} -appRegistrationId {2} -tenantId {3} -subscriptionId {4}', parameters('falconClientId'), parameters('falconClientSecret'), parameters('appRegistration'), tenant().tenantId, subscription().subscriptionId)]",
+                "scriptContent": "      param(\r\n        [string] $clientId,\r\n        [string] $clientSecret,\r\n        [string] $appRegistrationId,\r\n        [string] $tenantId,\r\n        [string] $subscriptionId\r\n    )\r\n    $ErrorActionPreference = 'Stop'\r\n    # Authenticate to Falcon Cloud Security\r\n    Install-Module -Name PSFalcon -Force \r\n\r\n    # Build token request\r\n    $Token = @{\r\n        ClientId     = $clientId\r\n        ClientSecret = $clientSecret\r\n    }\r\n\r\n    # Request token\r\n    Request-FalconToken @Token\r\n\r\n    # Create Azure Account in Falcon Horizon\r\n    New-FalconHorizonAzureAccount -subscriptionId $subscriptionId -TenantId $tenantId -ClientId $appRegistrationId \r\n\r\n    # Get certificate\r\n    $cert = (Get-FalconHorizonAzureCertificate -TenantId $tenantId).public_certificate\r\n\r\n    # Output certificate\r\n    $DeploymentScriptOutputs['text'] = $cert\r\n\r\n    Write-Output $cert\r\n    "
+              }
+            }
+          },
+          "outputs": {
+            "text": {
+              "type": "string",
+              "value": "[reference('azureAccount').outputs.text]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "appRegistration",
+        "rg"
+      ]
+    },
+    "keyVault": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('keyvault-deployment-{0}', parameters('deploymentNameSuffix'))]",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "keyVaultName": {
+            "value": "[variables('keyVaultName')]"
+          },
+          "skuName": {
+            "value": "standard"
+          },
+          "cspmCertificate": {
+            "value": "[reference('script').outputs.text.value]"
+          },
+          "falconClientId": {
+            "value": "[parameters('falconClientId')]"
+          },
+          "falconClientSecret": {
+            "value": "[parameters('falconClientSecret')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "languageVersion": "2.1-experimental",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
+            "_EXPERIMENTAL_FEATURES_ENABLED": [
+              "Extensibility"
+            ],
+            "_generator": {
+              "name": "bicep",
+              "version": "0.30.23.60470",
+              "templateHash": "16918556437729113466"
+            }
+          },
+          "parameters": {
+            "keyVaultName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]"
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "standard",
+              "allowedValues": [
+                "standard",
+                "premium"
+              ]
+            },
+            "cspmCertificate": {
+              "type": "securestring"
+            },
+            "falconClientId": {
+              "type": "string"
+            },
+            "falconClientSecret": {
+              "type": "securestring"
+            }
+          },
+          "resources": {
+            "keyVault": {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2022-07-01",
+              "name": "[parameters('keyVaultName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                  "family": "A",
+                  "name": "[parameters('skuName')]"
+                },
+                "enabledForDeployment": true,
+                "enabledForTemplateDeployment": true,
+                "enabledForDiskEncryption": false,
+                "enableRbacAuthorization": true,
+                "enableSoftDelete": true,
+                "networkAcls": {
+                  "bypass": "AzureServices",
+                  "defaultAction": "Allow",
+                  "ipRules": [],
+                  "virtualNetworkRules": []
+                },
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            "cert": {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('keyVaultName'), 'falcon-cspm-certificate')]",
+              "properties": {
+                "value": "[parameters('cspmCertificate')]"
+              },
+              "dependsOn": [
+                "keyVault"
+              ]
+            },
+            "clientId": {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('keyVaultName'), 'falcon-client-id')]",
+              "properties": {
+                "value": "[parameters('falconClientId')]"
+              },
+              "dependsOn": [
+                "keyVault"
+              ]
+            },
+            "clientSecret": {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('keyVaultName'), 'falcon-client-secret')]",
+              "properties": {
+                "value": "[parameters('falconClientSecret')]"
+              },
+              "dependsOn": [
+                "keyVault"
+              ]
+            }
+          },
+          "outputs": {
+            "keyVaultName": {
+              "type": "string",
+              "value": "[parameters('keyVaultName')]"
+            },
+            "keyVaultResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "rg",
+        "script"
+      ]
+    },
+    "appCertificate": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('cert-deployment-{0}', parameters('deploymentNameSuffix'))]",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "keyVaultName": {
+            "value": "[reference('keyVault').outputs.keyVaultName.value]"
+          },
+          "resourceGroupName": {
+            "value": "[parameters('resourceGroupName')]"
+          },
+          "deploymentNameSuffix": {
+            "value": "[parameters('deploymentNameSuffix')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "languageVersion": "2.1-experimental",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
+            "_EXPERIMENTAL_FEATURES_ENABLED": [
+              "Extensibility"
+            ],
+            "_generator": {
+              "name": "bicep",
+              "version": "0.30.23.60470",
+              "templateHash": "5029393444419629790"
+            }
+          },
+          "parameters": {
+            "keyVaultName": {
+              "type": "string"
+            },
+            "resourceGroupName": {
+              "type": "string"
+            },
+            "deploymentNameSuffix": {
+              "type": "string"
+            }
+          },
+          "resources": {
+            "keyVault": {
+              "existing": true,
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2022-07-01",
+              "name": "[parameters('keyVaultName')]"
+            },
+            "appCertificate": {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2022-09-01",
+              "name": "[format('appcert-deployment-{0}', parameters('deploymentNameSuffix'))]",
+              "resourceGroup": "[parameters('resourceGroupName')]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "appName": {
+                    "value": "crowdstrike"
+                  },
+                  "deployEnvironment": {
+                    "value": "cspm"
+                  },
+                  "cspmCertificate": {
+                    "reference": {
+                      "keyVault": {
+                        "id": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+                      },
+                      "secretName": "falcon-cspm-certificate"
+                    }
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "languageVersion": "2.1-experimental",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
+                    "_EXPERIMENTAL_FEATURES_ENABLED": [
+                      "Extensibility"
+                    ],
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.30.23.60470",
+                      "templateHash": "5104545189355266831"
+                    }
+                  },
+                  "parameters": {
+                    "appName": {
+                      "type": "string",
+                      "defaultValue": "crowdstrike"
+                    },
+                    "deployEnvironment": {
+                      "type": "string",
+                      "defaultValue": "cspm"
+                    },
+                    "cspmCertificate": {
+                      "type": "securestring"
+                    }
+                  },
+                  "variables": {
+                    "applicationRegistrationName": "[format('{0}-{1}-app', parameters('appName'), parameters('deployEnvironment'))]"
+                  },
+                  "imports": {
+                    "microsoftGraph": {
+                      "provider": "MicrosoftGraph",
+                      "version": "1.0.0"
+                    }
+                  },
+                  "resources": {
+                    "applicationRegistration": {
+                      "import": "microsoftGraph",
+                      "type": "Microsoft.Graph/applications@v1.0",
+                      "properties": {
+                        "uniqueName": "[variables('applicationRegistrationName')]",
+                        "displayName": "[variables('applicationRegistrationName')]",
+                        "keyCredentials": [
+                          {
+                            "type": "AsymmetricX509Cert",
+                            "usage": "Verify",
+                            "key": "[parameters('cspmCertificate')]",
+                            "displayName": "CrowdStrike"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "dependsOn": [
+                "keyVault"
+              ]
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "appRegistration",
+        "keyVault",
+        "rg",
+        "script"
+      ]
+    },
+    "roleAssignment": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('role-deployment-{0}', parameters('deploymentNameSuffix'))]",
+      "location": "[deployment().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "principalId": {
+            "value": "[reference('appRegistration').outputs.principalId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "languageVersion": "2.1-experimental",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
+            "_EXPERIMENTAL_FEATURES_ENABLED": [
+              "Extensibility"
+            ],
+            "_generator": {
+              "name": "bicep",
+              "version": "0.30.23.60470",
+              "templateHash": "2780020104547747919"
+            }
+          },
+          "parameters": {
+            "principalId": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "roleDefinitionIds": [
+              "39bc4728-0917-49c7-9d2c-d95423bc2eb4",
+              "21090545-7ca7-4776-b22c-e363652d74d2",
+              "acdd72a7-3385-48ef-bd42-f606fba81ae7",
+              "de139f84-1756-47ae-9be6-808fbbe84772",
+              "7f6c6a51-bcf8-42ba-9220-52d62157d7db"
+            ]
+          },
+          "resources": {
+            "roleAssignment": {
+              "copy": {
+                "name": "roleAssignment",
+                "count": "[length(variables('roleDefinitionIds'))]"
+              },
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('principalId'), variables('roleDefinitionIds')[copyIndex()], subscription().subscriptionId)]",
+              "properties": {
+                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitionIds')[copyIndex()])]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "appRegistration",
+        "keyVault",
+        "script"
+      ]
+    }
+  },
+  "outputs": {
+    "appRegistrationId": {
+      "type": "string",
+      "value": "[reference('appRegistration').outputs.appId.value]"
+    }
+  }
+}
