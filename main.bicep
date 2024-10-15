@@ -8,7 +8,7 @@ param location string = deployment().location
 param deploymentNameSuffix string = utcNow()
 
 @description('The name of the resource group.')
-param resourceGroupName string = 'rg-cs-cspm'
+param resourceGroupName string = 'rg-cspm-demo-2'
 
 @description('The client ID for the Falcon API.')
 param falconClientId string 
@@ -63,6 +63,7 @@ module keyVault  './modules/keyVault.bicep' = {
     falconClientSecret: falconClientSecret
   }
   dependsOn: [
+    appRegistration
     script
   ]
 }
@@ -79,6 +80,7 @@ module appCertificate './modules/secret.bicep' = {
   dependsOn: [
     appRegistration
     script
+    keyVault
   ]
 }
 
@@ -89,12 +91,12 @@ module appCertificate './modules/secret.bicep' = {
 //'de139f84-1756-47ae-9be6-808fbbe84772' // Website Contributor 
 //'7f6c6a51-bcf8-42ba-9220-52d62157d7db' // Azure Kubernetes Service RBAC Reader
 module roleAssignment './modules/roleAssignment.bicep' = {
-  name: 'role-deployment-${deploymentNameSuffix}'
+  name: 'role-${deploymentNameSuffix}'
   params: {
     principalId: appRegistration.outputs.principalId
   }
   dependsOn: [
-    appRegistration
+    appCertificate
     keyVault
     script
   ]

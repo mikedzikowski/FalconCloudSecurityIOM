@@ -109,5 +109,5 @@ resource userReadBasicAll 'Microsoft.Graph/appRoleAssignedTo@v1.0' = {
 }
 
 output applicationRegistrationId string = applicationRegistration.id
-output principalId string = applicationRegistrationServicePrincipal.appId
+output principalId string = applicationRegistrationServicePrincipal.id
 output appId string = applicationRegistration.appId

@@ -10,7 +10,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "12660240593967170372"
+      "templateHash": "2233391684030249106"
     }
   },
   "parameters": {
@@ -30,7 +30,7 @@
     },
     "resourceGroupName": {
       "type": "string",
-      "defaultValue": "rg-cs-cspm",
+      "defaultValue": "rg-cspm-demo-2",
       "metadata": {
         "description": "The name of the resource group."
       }
@@ -49,8 +49,7 @@
     }
   },
   "variables": {
-    "keyVaultName": "[format('kv-cspm-{0}', uniqueString(parameters('resourceGroupName')))]",
-    "subscriptionId": "[subscription().subscriptionId]"
+    "keyVaultName": "[format('kv-cspm-{0}', uniqueString(parameters('resourceGroupName')))]"
   },
   "resources": {
     "rg": {
@@ -580,6 +579,7 @@
         }
       },
       "dependsOn": [
+        "appRegistration",
         "rg",
         "script"
       ]
@@ -738,7 +738,7 @@
     "roleAssignment": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
-      "name": "[format('role-deployment-{0}', parameters('deploymentNameSuffix'))]",
+      "name": "[format('role-{0}', parameters('deploymentNameSuffix'))]",
       "location": "[deployment().location]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -798,6 +798,7 @@
         }
       },
       "dependsOn": [
+        "appCertificate",
         "appRegistration",
         "keyVault",
         "script"
