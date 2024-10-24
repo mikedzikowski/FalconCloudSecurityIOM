@@ -60,7 +60,7 @@
                             "type": "Microsoft.Common.TextBlock",
                             "visible": true,
                             "options": {
-                                "text": "NOTE: When using an existing service principal, please ensure the ArcPull role has been applied and please have the password available or create a new password.",
+                                "text": "NOTE: When using an existing service principal, please ensure the proper roles has been applied and please have the password available or create a new password.",
                                 "link": {
                                     "label": "Learn more",
                                     "uri": "https://learn.microsoft.com/en-us/cli/azure/azure-cli-sp-tutorial-7?tabs=bash#reset-credentials-returning-output-to-the-console-and-log-file"
