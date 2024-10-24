@@ -17,6 +17,13 @@ param falconClientId string
 @secure()
 param falconClientSecret string
 
+@description('The app registration ID for the Azure AD application.')
+param appRegistrationAppId string
+
+@description('The name of the user-assigned managed identity.')
+param uamiName string
+param deployIOA bool = false
+
 var keyVaultName = 'kv-cspm-${uniqueString(resourceGroupName)}'
 
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
@@ -24,17 +31,9 @@ resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   location: location
 }
 
-// Create App Registration in Azure AD with API Permissions for CrowdStrike
-module appRegistration './modules/appRegistration.bicep' = {
-  scope: subscription()
-  name: 'appreg-deployment-${deploymentNameSuffix}'
-  params: {
-    appName: 'crowdstrike'
-    deployEnvironment: 'cspm'
-  }
-  dependsOn: [
-    rg
-  ]
+resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30'  existing = {
+  scope: resourceGroup(rg.name)
+    name: uamiName
 }
 
 // Create Azure Account in CrowdStrike
@@ -44,17 +43,14 @@ module script './modules/azureAccount.bicep' = {
   params: {
     falconClientId: falconClientId
     falconClientSecret: falconClientSecret
-    appRegistration: appRegistration.outputs.appId
+    appRegistration: appRegistrationAppId
   }
-  dependsOn: [
-    appRegistration
-  ]
 }
 
 // Create Key Vault and upload certificate to Key Vault
 module keyVault  './modules/keyVault.bicep' = { 
   scope: resourceGroup(rg.name)
-  name: 'keyvault-deployment-${deploymentNameSuffix}'
+  name: 'cs-keyvault-deployment-${deploymentNameSuffix}'
   params: {
     keyVaultName: keyVaultName
     skuName: 'standard'
@@ -63,24 +59,24 @@ module keyVault  './modules/keyVault.bicep' = {
     falconClientSecret: falconClientSecret
   }
   dependsOn: [
-    appRegistration
     script
   ]
 }
 
-// Add Certificate to App Registration 
-module appCertificate './modules/secret.bicep' = {
+// ADD CERTIFICATE TO REGISTRATION USING DEPLOYMENT SCRIPT 
+module certificate './modules/certificate.bicep' = {
   scope: resourceGroup(rg.name)
-  name: 'cert-deployment-${deploymentNameSuffix}'
+  name: 'cs-cert-deployment-${deploymentNameSuffix}'
   params: {
-    keyVaultName: keyVault.outputs.keyVaultName
-    resourceGroupName: rg.name
-    deploymentNameSuffix: deploymentNameSuffix
+    location: location
+    appRegistrationId: appRegistrationAppId
+    cspmCertificate: script.outputs.text
+    userAssignedIdentityName: uami.name
+    userAssignedIdentityResourceGroupName: split(uami.id, '/')[4]
   }
   dependsOn: [
-    appRegistration
-    script
     keyVault
+    script
   ]
 }
 
@@ -91,15 +87,15 @@ module appCertificate './modules/secret.bicep' = {
 //'de139f84-1756-47ae-9be6-808fbbe84772' // Website Contributor 
 //'7f6c6a51-bcf8-42ba-9220-52d62157d7db' // Azure Kubernetes Service RBAC Reader
 module roleAssignment './modules/roleAssignment.bicep' = {
-  name: 'role-${deploymentNameSuffix}'
+  name: 'cs-role-${deploymentNameSuffix}'
   params: {
-    principalId: appRegistration.outputs.principalId
+    principalId: appRegistrationAppId
   }
   dependsOn: [
-    appCertificate
     keyVault
     script
+    certificate
   ]
 }
 
-output appRegistrationId string = appRegistration.outputs.appId
+output deployIOA bool = deployIOA

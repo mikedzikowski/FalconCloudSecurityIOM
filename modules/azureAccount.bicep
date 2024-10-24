@@ -1,5 +1,4 @@
 param location string = resourceGroup().location
-
 param falconClientId string
 @secure()
 param falconClientSecret string
@@ -12,7 +11,7 @@ resource azureAccount 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
   properties: {
     azPowerShellVersion: '10.0'
     cleanupPreference: 'OnSuccess'
-    retentionInterval: 'P1D'
+    retentionInterval: 'PT1H'
     arguments: '-clientId ${falconClientId} -clientSecret ${falconClientSecret} -appRegistrationId ${appRegistration} -tenantId ${tenant().tenantId} -subscriptionId ${subscription().subscriptionId}'
     scriptContent: '''
       param(
@@ -24,27 +23,57 @@ resource azureAccount 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
     )
     $ErrorActionPreference = 'Stop'
     # Authenticate to Falcon Cloud Security
-    Install-Module -Name PSFalcon -Force 
-
-    # Build token request
-    $Token = @{
-        ClientId     = $clientId
-        ClientSecret = $clientSecret
+    try 
+    {
+      Install-Module -Name PSFalcon -Force
+    } 
+    catch
+    {
+      Write-Error "Failed to install PSFalcon module: $_"
+      throw
     }
 
-    # Request token
-    Request-FalconToken @Token
+    try
+    {
+      # Build token request
+      $Token = @{
+        ClientId     = $clientId
+        ClientSecret = $clientSecret
+      }
+      # Request token
+      Request-FalconToken @Token
+    } 
+    catch 
+     {
+      Write-Error "Failed to request Falcon token: $_"
+      throw
+    }
 
-    # Create Azure Account in Falcon Horizon
-    New-FalconHorizonAzureAccount -subscriptionId $subscriptionId -TenantId $tenantId -ClientId $appRegistrationId 
+    try 
+    {
+      # Create Azure Account in Falcon Horizon
+      New-FalconHorizonAzureAccount -subscriptionId $subscriptionId -TenantId $tenantId -ClientId $appRegistrationId
+    }
+    catch 
+    {
+      Write-Error "Failed to create Azure account in Falcon Horizon: $_"
+      throw
+    }
 
-    # Get certificate
-    $cert = (Get-FalconHorizonAzureCertificate -TenantId $tenantId).public_certificate
+    try 
+    {
+      # Get certificate
+      $cert = (Get-FalconHorizonAzureCertificate -TenantId $tenantId).public_certificate
 
-    # Output certificate
-    $DeploymentScriptOutputs['text'] = $cert
-
-    Write-Output $cert
+      # Output certificate
+      $DeploymentScriptOutputs['text'] = $cert
+      Write-Output $cert
+    } 
+    catch 
+    {
+      Write-Error "Failed to get or output certificate: $_"
+      throw
+    }
     '''
   }
 }

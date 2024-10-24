@@ -10,8 +10,6 @@ param cspmCertificate string
 param falconClientId string
 @secure()
 param falconClientSecret string
-// @description('The suffix to be added to the deployment name.')
-// param deploymentNameSuffix string = utcNow()
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
   name: keyVaultName

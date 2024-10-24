@@ -3,7 +3,7 @@
     "view": {
         "kind": "Form",
         "properties": {
-            "title": "Automated Onboarding of Azure Container Registries to Falcon Cloud Security",
+            "title": "CrowdStrike Falcon Cloud Security Posture Management",
             "isWizard": true,
             "steps": [
                 {
@@ -18,6 +18,91 @@
                                     "microsoft.resources/resourcegroups"
                                 ]
                             }
+                        }
+                    ]
+                },
+                {
+                    "name": "managedIdentity",
+                    "label": "Managed Identity",
+                    "elements": [
+                        {
+                            "name": "managedIdentity",
+                            "type": "Microsoft.Solutions.ResourceSelector",
+                            "label": "Select user assigned identity",
+                            "resourceType": "Microsoft.ManagedIdentity/userAssignedIdentities",
+                            "options": {
+                                "filter": {
+                                    "subscription": "onBasics",
+                                    "location": "onBasics"
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "sp",
+                    "label": "Service Principal",
+                    "elements": [
+                        {
+                            "name": "newSpinfo",
+                            "type": "Microsoft.Common.TextBlock",
+                            "visible": true,
+                            "options": {
+                                "text": "NOTE: If selected a new service principal may be created for you. Please take note of the password when following the wizard.",
+                                "link": {
+                                    "label": "Learn more",
+                                    "uri": "https://learn.microsoft.com/en-us/cli/azure/azure-cli-sp-tutorial-2"
+                                }
+                            }
+                        },
+                        {
+                            "name": "existingSpinfo",
+                            "type": "Microsoft.Common.TextBlock",
+                            "visible": true,
+                            "options": {
+                                "text": "NOTE: When using an existing service principal, please ensure the ArcPull role has been applied and please have the password available or create a new password.",
+                                "link": {
+                                    "label": "Learn more",
+                                    "uri": "https://learn.microsoft.com/en-us/cli/azure/azure-cli-sp-tutorial-7?tabs=bash#reset-credentials-returning-output-to-the-console-and-log-file"
+                                }
+                            }
+                        },
+                        {
+                            "name": "ServicePrincipal",
+                            "type": "Microsoft.Common.ServicePrincipalSelector",
+                            "label": {
+                                "password": "Password",
+                                "authenticationType": "Authentication Type",
+                                "sectionHeader": "Service Principal"
+                            },
+                            "toolTip": {
+                                "password": "Password",
+                                "authenticationType": "Authentication Type"
+                            },
+                            "defaultValue": {
+                                "principalId": "<default guid>",
+                                "name": "<default name>"
+                            },
+                            "constraints": {
+                                "required": false
+                            },
+                            "options": {
+                                "hideCertificate": true
+                            },
+                            "visible": true
+                        }
+                    ]
+                },
+                {
+                    "name": "fcsIOA",
+                    "label": "Enable IOA (Indiactors of Attack)",
+                    "elements": [
+                        {
+                            "name": "fcsIOA",
+                            "type": "Microsoft.Common.CheckBox",
+                            "label": "Enable Indicators of Attack",
+                            "defaultValue": false,
+                            "visible": true
                         }
                     ]
                 },
@@ -58,9 +143,12 @@
                                 "password": "Falcon Client Secret"
                             },
                             "toolTip": "",
-                            "validations": [
-                                {}
-                            ],
+                            "constraints": {
+                                "required": true,
+                                "validations": [
+                                    {}
+                                ]
+                            },
                             "options": {
                                 "hideConfirmation": true
                             },
@@ -90,8 +178,10 @@
             "location": "[steps('basics').resourceScope.location.name]",
             "parameters": {
                 "tagsByResource": "[steps('tags').tagsByResource]",
+                "appRegistrationAppId": "[steps('sp').ServicePrincipal.appId]",
                 "falconClientId": "[steps('falcon').cid]",
-                "falconClientSecret": "[steps('falcon').secret]"
+                "falconClientSecret": "[steps('falcon').secret]",
+                "uamiName": "[steps('managedIdentity').managedIdentity.name]"
             }
         }
     }
