@@ -116,14 +116,14 @@
                             "visible": true,
                             "options": {
                                 "icon": "None",
-                                "text": "Please enter your Falcon CID and Client Secret. If you do not have a Falcon CID, please contact your Falcon administrator. For more information, see <a href='https://falcon.crowdstrike.com' target='_blank'>here</a>.",
+                                "text": "Please enter your Falcon Client ID and Client Secret. If you do not have a Falcon CLient ID, please contact your Falcon administrator. For more information, see <a href='https://falcon.crowdstrike.com' target='_blank'>here</a>.",
                                 "uri": "https://falcon.crowdstrike.com"
                             }
                         },
                         {
                             "name": "cid",
                             "type": "Microsoft.Common.TextBox",
-                            "label": "Falcon CID",
+                            "label": "Falcon Client ID",
                             "defaultValue": "",
                             "toolTip": "Use only allowed characters",
                             "placeholder": "",

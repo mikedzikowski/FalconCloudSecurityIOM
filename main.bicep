@@ -8,7 +8,7 @@ param location string = deployment().location
 param deploymentNameSuffix string = utcNow()
 
 @description('The name of the resource group.')
-param resourceGroupName string = 'rg-cspm-demo-2'
+param resourceGroupName string = 'rg-cs-cspm'
 
 @description('The client ID for the Falcon API.')
 param falconClientId string 

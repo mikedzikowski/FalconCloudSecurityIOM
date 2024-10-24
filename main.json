@@ -10,7 +10,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "4492262779333144515"
+      "templateHash": "4141760040521034618"
     }
   },
   "parameters": {
@@ -30,7 +30,7 @@
     },
     "resourceGroupName": {
       "type": "string",
-      "defaultValue": "rg-cspm-demo-2",
+      "defaultValue": "rg-cs-cspm",
       "metadata": {
         "description": "The name of the resource group."
       }
