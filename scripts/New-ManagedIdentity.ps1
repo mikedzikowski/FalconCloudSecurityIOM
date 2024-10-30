@@ -5,7 +5,7 @@
 $TenantId = ''
 
 # The name of your web app, which has a managed identity.
-$webAppName = "" 
+$userAssignedManagedIdentityName = "" 
 $resourceGroupName = ""
 
 # The name of the app role that the managed identity should be assigned to.
@@ -13,7 +13,7 @@ $appRoleName = "Application.ReadWrite.All"
 
 # Get the web app's managed identity's object ID.
 Connect-AzAccount -Tenant $TenantId
-$managedIdentityObjectId = (Get-AzUserAssignedIdentity -ResourceGroupName $resourceGroupName -Name $webAppName).PrincipalId
+$managedIdentityObjectId = (Get-AzUserAssignedIdentity -ResourceGroupName $resourceGroupName -Name $userAssignedManagedIdentityName).PrincipalId
 
 Connect-MgGraph -TenantId $TenantId -Scopes 'Application.Read.All','AppRoleAssignment.ReadWrite.All','Directory.ReadWrite.All'
 
