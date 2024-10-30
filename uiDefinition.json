@@ -29,7 +29,6 @@
                     "elements": [
                         {
                             "name": "iomDeployment",
-                            "label": "Deployment Option",
                             "type": "Microsoft.Common.Section",
                             "visible": true,
                             "elements": [
@@ -39,7 +38,14 @@
                                     "label": "Enable Indicators of Misconfiguration",
                                     "defaultValue": false,
                                     "visible": true
-                                },
+                                }
+                            ]
+                        },
+                        {
+                            "name": "identity",
+                            "type": "Microsoft.Common.Section",
+                            "visible": "[steps('iom').iomDeployment.enable]",
+                            "elements" : [
                                 {
                                     "name": "sp",
                                     "type": "Microsoft.Common.ServicePrincipalSelector",
@@ -117,7 +123,6 @@
                     "elements": [
                         {
                             "name": "ioaDeployment",
-                            "label": "Deployment Option",
                             "type": "Microsoft.Common.Section",
                             "visible": true,
                             "elements": [
@@ -250,7 +255,7 @@
             "subscriptionId": "[steps('basics').resourceScope.subscription.id]",
             "location": "[steps('basics').resourceScope.location.name]",
             "parameters": {
-                "appRegistrationAppId": "[steps('iom').iomDeployment.sp.appId]",
+                "appRegistrationAppId": "[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.sp.appId, '')]",
                 "deployActivityLogDiagnosticSettings": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('ioa').ioaDeployment.deployActivityLogDiagnosticSettings, false)]",
                 "deployEntraLogDiagnosticSettings": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('ioa').ioaDeployment.deployEntraLogDiagnosticSettings, false)]",
                 "deployIOA": "[steps('ioa').ioaDeployment.enable]",
@@ -260,9 +265,9 @@
                 "falconClientId": "[steps('falconCloudSecurity').credentials.falconClientId]",
                 "falconClientSecret": "[steps('falconCloudSecurity').credentials.falconClientSecret]",
                 "tagsByResource": "[steps('tags').tagsByResource]",
-                "uamiName": "[steps('iom').iomDeployment.managedIdentity.name]",
-                "uamiResourceId": "[steps('iom').iomDeployment.managedIdentity.id]",
-                "exemptPolicyAssignmentIds": "[map(steps('iom').iomDeployment.exemption, (item) => item.id)]"
+                "uamiName": "[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.managedIdentity.name, '')]",
+                "uamiResourceId": "[[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.managedIdentity.id, '')]",
+                "exemptPolicyAssignmentIds": "[if(equals(steps('iom').iomDeployment.enable, true), map(steps('iom').identity.exemption, (item) => item.id), '')]"
             }
         }
     }

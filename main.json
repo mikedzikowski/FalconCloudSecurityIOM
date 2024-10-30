@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "2042694539221926924"
+      "templateHash": "350043398291913024"
     }
   },
   "parameters": {
@@ -94,6 +94,10 @@
     "deployIOA": {
       "type": "bool",
       "defaultValue": false
+    },
+    "deployIOM": {
+      "type": "bool",
+      "defaultValue": true
     },
     "randomSuffix": {
       "type": "string",
@@ -191,8 +195,8 @@
       "apiVersion": "2021-05-01-preview",
       "name": "[variables('activityLogSettings').diagnosticSetttingsName]",
       "properties": {
-        "eventHubAuthorizationRuleId": "[if(and(parameters('deployIOA'), parameters('deployActivityLogDiagnosticSettings')), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.eventHubAuthorizationRuleId.value, 'None')]",
-        "eventHubName": "[if(and(parameters('deployIOA'), parameters('deployActivityLogDiagnosticSettings')), variables('activityLogSettings').eventHubName, 'None')]",
+        "eventHubAuthorizationRuleId": "[if(and(parameters('deployIOA'), parameters('deployActivityLogDiagnosticSettings')), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.eventHubAuthorizationRuleId.value, 'none')]",
+        "eventHubName": "[if(and(parameters('deployIOA'), parameters('deployActivityLogDiagnosticSettings')), variables('activityLogSettings').eventHubName, 'none')]",
         "logs": [
           {
             "category": "Administrative",
@@ -293,6 +297,7 @@
       ]
     },
     {
+      "condition": "[parameters('deployIOM')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[format('cs-iom-account-deployment-{0}', parameters('deploymentNameSuffix'))]",
@@ -303,18 +308,10 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "falconClientId": {
-            "value": "[parameters('falconClientId')]"
-          },
-          "falconClientSecret": {
-            "value": "[parameters('falconClientSecret')]"
-          },
-          "appRegistration": {
-            "value": "[parameters('appRegistrationAppId')]"
-          },
-          "subscriptionId": {
-            "value": "[variables('subscriptionId')]"
-          }
+          "falconClientId": "[if(parameters('deployIOM'), createObject('value', parameters('falconClientId')), createObject('value', 'none'))]",
+          "falconClientSecret": "[if(parameters('deployIOM'), createObject('value', parameters('falconClientSecret')), createObject('value', 'none'))]",
+          "appRegistration": "[if(parameters('deployIOM'), createObject('value', parameters('appRegistrationAppId')), createObject('value', 'none'))]",
+          "subscriptionId": "[if(parameters('deployIOM'), createObject('value', variables('subscriptionId')), createObject('value', 'none'))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -377,6 +374,7 @@
       ]
     },
     {
+      "condition": "[parameters('deployIOM')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[format('cs-iom-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))]",
@@ -387,18 +385,10 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "keyVaultName": {
-            "value": "[variables('iomKeyVaultName')]"
-          },
-          "falconClientId": {
-            "value": "[parameters('falconClientId')]"
-          },
-          "falconClientSecret": {
-            "value": "[parameters('falconClientSecret')]"
-          },
-          "cspmCertificate": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('iomResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-iom-account-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.text.value]"
-          }
+          "keyVaultName": "[if(parameters('deployIOM'), createObject('value', variables('iomKeyVaultName')), createObject('value', 'none'))]",
+          "falconClientId": "[if(parameters('deployIOM'), createObject('value', parameters('falconClientId')), createObject('value', 'none'))]",
+          "falconClientSecret": "[if(parameters('deployIOM'), createObject('value', parameters('falconClientSecret')), createObject('value', 'none'))]",
+          "cspmCertificate": "[if(parameters('deployIOM'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('iomResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-iom-account-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.text.value), createObject('value', 'none'))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -516,6 +506,7 @@
       ]
     },
     {
+      "condition": "[parameters('deployIOM')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[format('cs-iom-cert-deployment-{0}', parameters('deploymentNameSuffix'))]",
@@ -526,21 +517,11 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "appRegistrationId": {
-            "value": "[parameters('appRegistrationAppId')]"
-          },
-          "cspmCertificate": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('iomResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-iom-account-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.text.value]"
-          },
-          "userAssignedIdentityName": {
-            "value": "[parameters('uamiName')]"
-          },
-          "userAssignedIdentityResourceGroupName": {
-            "value": "[split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, split(parameters('uamiResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('uamiName')), '/')[4]]"
-          }
+          "location": "[if(parameters('deployIOM'), createObject('value', parameters('location')), createObject('value', 'none'))]",
+          "appRegistrationId": "[if(parameters('deployIOM'), createObject('value', parameters('appRegistrationAppId')), createObject('value', 'none'))]",
+          "cspmCertificate": "[if(parameters('deployIOM'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('iomResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-iom-account-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.text.value), createObject('value', 'none'))]",
+          "userAssignedIdentityName": "[if(parameters('deployIOM'), createObject('value', parameters('uamiName')), createObject('value', 'none'))]",
+          "userAssignedIdentityResourceGroupName": "[if(parameters('deployIOM'), createObject('value', split(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, split(parameters('uamiResourceId'), '/')[4]), 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('uamiName')), '/')[4]), createObject('value', 'none'))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -602,6 +583,7 @@
       ]
     },
     {
+      "condition": "[parameters('deployIOM')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[format('cs-iom-role-{0}', parameters('deploymentNameSuffix'))]",
@@ -612,23 +594,16 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "principalId": {
-            "value": "[parameters('appRegistrationAppId')]"
-          }
+          "principalId": "[if(parameters('deployIOM'), createObject('value', parameters('appRegistrationAppId')), createObject('value', 'none'))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
-          "languageVersion": "2.1-experimental",
           "contentVersion": "1.0.0.0",
           "metadata": {
-            "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
-            "_EXPERIMENTAL_FEATURES_ENABLED": [
-              "Extensibility"
-            ],
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "2780020104547747919"
+              "templateHash": "9894063316347119353"
             }
           },
           "parameters": {
@@ -645,8 +620,8 @@
               "7f6c6a51-bcf8-42ba-9220-52d62157d7db"
             ]
           },
-          "resources": {
-            "roleAssignment": {
+          "resources": [
+            {
               "copy": {
                 "name": "roleAssignment",
                 "count": "[length(variables('roleDefinitionIds'))]"
@@ -660,7 +635,7 @@
                 "principalType": "ServicePrincipal"
               }
             }
-          }
+          ]
         }
       },
       "dependsOn": [
@@ -682,10 +657,10 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', variables('ioaKeyVaultName')), createObject('value', 'None'))]",
-          "falconClientId": "[if(parameters('deployIOA'), createObject('value', parameters('falconClientId')), createObject('value', 'None'))]",
-          "falconClientSecret": "[if(parameters('deployIOA'), createObject('value', parameters('falconClientSecret')), createObject('value', 'None'))]",
-          "virtualNetworkName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.virtualNetworkName.value), createObject('value', 'None'))]"
+          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', variables('ioaKeyVaultName')), createObject('value', 'none'))]",
+          "falconClientId": "[if(parameters('deployIOA'), createObject('value', parameters('falconClientId')), createObject('value', 'none'))]",
+          "falconClientSecret": "[if(parameters('deployIOA'), createObject('value', parameters('falconClientSecret')), createObject('value', 'none'))]",
+          "virtualNetworkName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.virtualNetworkName.value), createObject('value', 'none'))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -935,7 +910,7 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "virtualNetworkName": "[if(parameters('deployIOA'), createObject('value', variables('virtualNetworkName')), createObject('value', 'None'))]",
+          "virtualNetworkName": "[if(parameters('deployIOA'), createObject('value', variables('virtualNetworkName')), createObject('value', 'none'))]",
           "tags": {
             "value": "[parameters('tags')]"
           }
@@ -1096,10 +1071,10 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "eventHubNamespaceName": "[if(parameters('deployIOA'), createObject('value', variables('eventHubNamespaceName')), createObject('value', 'None'))]",
-          "activityLogEventHubName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').eventHubName), createObject('value', 'None'))]",
-          "entraLogEventHubName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').eventHubName), createObject('value', 'None'))]",
-          "virtualNetworkName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.virtualNetworkName.value), createObject('value', 'None'))]",
+          "eventHubNamespaceName": "[if(parameters('deployIOA'), createObject('value', variables('eventHubNamespaceName')), createObject('value', 'none'))]",
+          "activityLogEventHubName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').eventHubName), createObject('value', 'none'))]",
+          "entraLogEventHubName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').eventHubName), createObject('value', 'none'))]",
+          "virtualNetworkName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.virtualNetworkName.value), createObject('value', 'none'))]",
           "tags": "[if(parameters('deployIOA'), createObject('value', parameters('tags')), createObject('value', createObject()))]"
         },
         "template": {
@@ -1275,13 +1250,13 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "userAssignedIdentityName": "[if(parameters('deployIOA'), createObject('value', variables('csLogSettings').storageAccountIdentityName), createObject('value', 'None'))]",
-          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('csLogSettings').storageAccountName), createObject('value', 'None'))]",
-          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultName.value), createObject('value', 'None'))]",
-          "storageAccountSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet1Id.value), createObject('value', 'None'))]",
-          "storagePrivateEndpointName": "[if(parameters('deployIOA'), createObject('value', variables('csLogSettings').storagePrivateEndpointName), createObject('value', 'None'))]",
-          "storagePrivateEndpointConnectionName": "[if(parameters('deployIOA'), createObject('value', variables('csLogSettings').storagePrivateEndpointConnectionName), createObject('value', 'None'))]",
-          "storagePrivateEndpointSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet3Id.value), createObject('value', 'None'))]",
+          "userAssignedIdentityName": "[if(parameters('deployIOA'), createObject('value', variables('csLogSettings').storageAccountIdentityName), createObject('value', 'none'))]",
+          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('csLogSettings').storageAccountName), createObject('value', 'none'))]",
+          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultName.value), createObject('value', 'none'))]",
+          "storageAccountSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet1Id.value), createObject('value', 'none'))]",
+          "storagePrivateEndpointName": "[if(parameters('deployIOA'), createObject('value', variables('csLogSettings').storagePrivateEndpointName), createObject('value', 'none'))]",
+          "storagePrivateEndpointConnectionName": "[if(parameters('deployIOA'), createObject('value', variables('csLogSettings').storagePrivateEndpointConnectionName), createObject('value', 'none'))]",
+          "storagePrivateEndpointSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet3Id.value), createObject('value', 'none'))]",
           "tags": "[if(parameters('deployIOA'), createObject('value', parameters('tags')), createObject('value', createObject()))]"
         },
         "template": {
@@ -1518,10 +1493,10 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "userAssignedIdentity": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-csLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.userAssignedIdentityId.value), createObject('value', 'None'))]",
-          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-csLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.storageAccountName.value), createObject('value', 'None'))]",
-          "keyName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csLogStorageKeyName.value), createObject('value', 'None'))]",
-          "keyVaultUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultUri.value), createObject('value', 'None'))]"
+          "userAssignedIdentity": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-csLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.userAssignedIdentityId.value), createObject('value', 'none'))]",
+          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-csLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.storageAccountName.value), createObject('value', 'none'))]",
+          "keyName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csLogStorageKeyName.value), createObject('value', 'none'))]",
+          "keyVaultUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultUri.value), createObject('value', 'none'))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -1600,8 +1575,8 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultName.value), createObject('value', 'None'))]",
-          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-csLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.storageAccountName.value), createObject('value', 'None'))]"
+          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultName.value), createObject('value', 'none'))]",
+          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-csLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.storageAccountName.value), createObject('value', 'none'))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -1667,13 +1642,13 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "userAssignedIdentityName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').storageAccountIdentityName), createObject('value', 'None'))]",
-          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').storageAccountName), createObject('value', 'None'))]",
-          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultName.value), createObject('value', 'None'))]",
-          "storageAccountSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet1Id.value), createObject('value', 'None'))]",
-          "storagePrivateEndpointName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').storagePrivateEndpointName), createObject('value', 'None'))]",
-          "storagePrivateEndpointConnectionName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').storagePrivateEndpointConnectionName), createObject('value', 'None'))]",
-          "storagePrivateEndpointSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet3Id.value), createObject('value', 'None'))]",
+          "userAssignedIdentityName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').storageAccountIdentityName), createObject('value', 'none'))]",
+          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').storageAccountName), createObject('value', 'none'))]",
+          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultName.value), createObject('value', 'none'))]",
+          "storageAccountSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet1Id.value), createObject('value', 'none'))]",
+          "storagePrivateEndpointName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').storagePrivateEndpointName), createObject('value', 'none'))]",
+          "storagePrivateEndpointConnectionName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').storagePrivateEndpointConnectionName), createObject('value', 'none'))]",
+          "storagePrivateEndpointSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet3Id.value), createObject('value', 'none'))]",
           "tags": "[if(parameters('deployIOA'), createObject('value', parameters('tags')), createObject('value', createObject()))]"
         },
         "template": {
@@ -1910,10 +1885,10 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "userAssignedIdentity": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-activityLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.userAssignedIdentityId.value), createObject('value', 'None'))]",
-          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-activityLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.storageAccountName.value), createObject('value', 'None'))]",
-          "keyName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.activityLogStorageKeyName.value), createObject('value', 'None'))]",
-          "keyVaultUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultUri.value), createObject('value', 'None'))]",
+          "userAssignedIdentity": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-activityLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.userAssignedIdentityId.value), createObject('value', 'none'))]",
+          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-activityLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.storageAccountName.value), createObject('value', 'none'))]",
+          "keyName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.activityLogStorageKeyName.value), createObject('value', 'none'))]",
+          "keyVaultUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultUri.value), createObject('value', 'none'))]",
           "tags": "[if(parameters('deployIOA'), createObject('value', parameters('tags')), createObject('value', createObject()))]"
         },
         "template": {
@@ -1994,13 +1969,13 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "userAssignedIdentityName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').storageAccountIdentityName), createObject('value', 'None'))]",
-          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').storageAccountName), createObject('value', 'None'))]",
-          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultName.value), createObject('value', 'None'))]",
-          "storageAccountSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet2Id.value), createObject('value', 'None'))]",
-          "storagePrivateEndpointName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').storagePrivateEndpointName), createObject('value', 'None'))]",
-          "storagePrivateEndpointConnectionName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').storagePrivateEndpointConnectionName), createObject('value', 'None'))]",
-          "storagePrivateEndpointSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet3Id.value), createObject('value', 'None'))]",
+          "userAssignedIdentityName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').storageAccountIdentityName), createObject('value', 'none'))]",
+          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').storageAccountName), createObject('value', 'none'))]",
+          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultName.value), createObject('value', 'none'))]",
+          "storageAccountSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet2Id.value), createObject('value', 'none'))]",
+          "storagePrivateEndpointName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').storagePrivateEndpointName), createObject('value', 'none'))]",
+          "storagePrivateEndpointConnectionName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').storagePrivateEndpointConnectionName), createObject('value', 'none'))]",
+          "storagePrivateEndpointSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet3Id.value), createObject('value', 'none'))]",
           "tags": "[if(parameters('deployIOA'), createObject('value', parameters('tags')), createObject('value', createObject()))]"
         },
         "template": {
@@ -2237,10 +2212,10 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "userAssignedIdentity": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-entraLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.userAssignedIdentityId.value), createObject('value', 'None'))]",
-          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-entraLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.storageAccountName.value), createObject('value', 'None'))]",
-          "keyName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.activityLogStorageKeyName.value), createObject('value', 'None'))]",
-          "keyVaultUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultUri.value), createObject('value', 'None'))]",
+          "userAssignedIdentity": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-entraLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.userAssignedIdentityId.value), createObject('value', 'none'))]",
+          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-entraLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.storageAccountName.value), createObject('value', 'none'))]",
+          "keyName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.activityLogStorageKeyName.value), createObject('value', 'none'))]",
+          "keyVaultUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultUri.value), createObject('value', 'none'))]",
           "tags": "[if(parameters('deployIOA'), createObject('value', parameters('tags')), createObject('value', createObject()))]"
         },
         "template": {
@@ -2321,25 +2296,20 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "functionAppIdentityName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').functionAppIdentityName), createObject('value', 'None'))]",
-          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultName.value), createObject('value', 'None'))]",
-          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').storageAccountName), createObject('value', 'None'))]",
-          "eventHubNamespaceName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.eventHubNamespaceName.value), createObject('value', 'None'))]",
+          "functionAppIdentityName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').functionAppIdentityName), createObject('value', 'none'))]",
+          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultName.value), createObject('value', 'none'))]",
+          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').storageAccountName), createObject('value', 'none'))]",
+          "eventHubNamespaceName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.eventHubNamespaceName.value), createObject('value', 'none'))]",
           "tags": "[if(parameters('deployIOA'), createObject('value', parameters('tags')), createObject('value', createObject()))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "languageVersion": "2.1-experimental",
           "contentVersion": "1.0.0.0",
           "metadata": {
-            "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
-            "_EXPERIMENTAL_FEATURES_ENABLED": [
-              "Extensibility"
-            ],
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "2063778641292263785"
+              "templateHash": "3759890741511968330"
             }
           },
           "parameters": {
@@ -2380,78 +2350,57 @@
               "defaultValue": "a638d3c7-ab3a-418d-83e6-5f17a39d4fde"
             }
           },
-          "resources": {
-            "keyVault": {
-              "existing": true,
-              "type": "Microsoft.KeyVault/vaults",
-              "apiVersion": "2021-06-01-preview",
-              "name": "[parameters('keyVaultName')]"
-            },
-            "storageAccount": {
-              "existing": true,
-              "type": "Microsoft.Storage/storageAccounts",
-              "apiVersion": "2023-05-01",
-              "name": "[parameters('storageAccountName')]"
-            },
-            "eventHubNamespace": {
-              "existing": true,
-              "type": "Microsoft.EventHub/namespaces",
-              "apiVersion": "2024-01-01",
-              "name": "[parameters('eventHubNamespaceName')]"
-            },
-            "functionIdentity": {
+          "resources": [
+            {
               "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
               "apiVersion": "2023-01-31",
               "name": "[parameters('functionAppIdentityName')]",
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]"
             },
-            "keyVaultRoleAssignment": {
+            {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
               "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), parameters('KeyVaultSecretsOfficerRoleId'), resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')))]",
               "properties": {
                 "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', parameters('KeyVaultSecretsOfficerRoleId'))]",
-                "principalId": "[reference('functionIdentity').principalId]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), '2023-01-31').principalId]",
                 "principalType": "[parameters('principalType')]"
               },
               "dependsOn": [
-                "functionIdentity",
-                "keyVault"
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName'))]"
               ]
             },
-            "storageAccountRoleAssignment": {
+            {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
               "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), parameters('StorageBlobDataOwnerRoleId'), resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')))]",
               "properties": {
                 "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', parameters('StorageBlobDataOwnerRoleId'))]",
-                "principalId": "[reference('functionIdentity').principalId]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), '2023-01-31').principalId]",
                 "principalType": "[parameters('principalType')]"
               },
               "dependsOn": [
-                "functionIdentity",
-                "storageAccount"
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName'))]"
               ]
             },
-            "eventHubNamespaceRoleAssignment": {
+            {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[format('Microsoft.EventHub/namespaces/{0}', parameters('eventHubNamespaceName'))]",
               "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), parameters('AzureEventHubsDataReceiverRoleId'), resourceId('Microsoft.EventHub/namespaces', parameters('eventHubNamespaceName')))]",
               "properties": {
                 "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', parameters('AzureEventHubsDataReceiverRoleId'))]",
-                "principalId": "[reference('functionIdentity').principalId]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), '2023-01-31').principalId]",
                 "principalType": "[parameters('principalType')]"
               },
               "dependsOn": [
-                "eventHubNamespace",
-                "functionIdentity"
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName'))]"
               ]
             }
-          },
+          ],
           "outputs": {
             "functionIdentityId": {
               "type": "string",
@@ -2463,11 +2412,11 @@
             },
             "functionIdentityClientId": {
               "type": "string",
-              "value": "[reference('functionIdentity').clientId]"
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), '2023-01-31').clientId]"
             },
             "functionIdentityPrincipalId": {
               "type": "string",
-              "value": "[reference('functionIdentity').principalId]"
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), '2023-01-31').principalId]"
             }
           }
         }
@@ -2493,19 +2442,19 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "hostingPlanName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').hostingPlanName), createObject('value', 'None'))]",
-          "functionAppName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').functionAppName), createObject('value', 'None'))]",
-          "functionAppIdentityName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-activityLogFunctionIdentity-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.functionIdentityName.value), createObject('value', 'None'))]",
-          "packageURL": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').ioaPackageURL), createObject('value', 'None'))]",
-          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').storageAccountName), createObject('value', 'None'))]",
-          "eventHubNamespaceName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.eventHubNamespaceName.value), createObject('value', 'None'))]",
-          "eventHubName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').eventHubName), createObject('value', 'None'))]",
-          "virtualNetworkName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.virtualNetworkName.value), createObject('value', 'None'))]",
-          "virtualNetworkSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet1Id.value), createObject('value', 'None'))]",
-          "diagnosticSettingName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').functionAppDiagnosticSettingName), createObject('value', 'None'))]",
-          "csCID": "[if(parameters('deployIOA'), createObject('value', parameters('falconCID')), createObject('value', 'None'))]",
-          "csClientIdUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csClientIdUri.value), createObject('value', 'None'))]",
-          "csClientSecretUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csClientSecretUri.value), createObject('value', 'None'))]",
+          "hostingPlanName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').hostingPlanName), createObject('value', 'none'))]",
+          "functionAppName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').functionAppName), createObject('value', 'none'))]",
+          "functionAppIdentityName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-activityLogFunctionIdentity-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.functionIdentityName.value), createObject('value', 'none'))]",
+          "packageURL": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').ioaPackageURL), createObject('value', 'none'))]",
+          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').storageAccountName), createObject('value', 'none'))]",
+          "eventHubNamespaceName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.eventHubNamespaceName.value), createObject('value', 'none'))]",
+          "eventHubName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').eventHubName), createObject('value', 'none'))]",
+          "virtualNetworkName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.virtualNetworkName.value), createObject('value', 'none'))]",
+          "virtualNetworkSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet1Id.value), createObject('value', 'none'))]",
+          "diagnosticSettingName": "[if(parameters('deployIOA'), createObject('value', variables('activityLogSettings').functionAppDiagnosticSettingName), createObject('value', 'none'))]",
+          "csCID": "[if(parameters('deployIOA'), createObject('value', parameters('falconCID')), createObject('value', 'none'))]",
+          "csClientIdUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csClientIdUri.value), createObject('value', 'none'))]",
+          "csClientSecretUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csClientSecretUri.value), createObject('value', 'none'))]",
           "tags": "[if(parameters('deployIOA'), createObject('value', parameters('tags')), createObject('value', createObject()))]"
         },
         "template": {
@@ -2808,27 +2757,22 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "functionAppIdentityName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').functionAppIdentityName), createObject('value', 'None'))]",
-          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultName.value), createObject('value', 'None'))]",
-          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').storageAccountName), createObject('value', 'None'))]",
-          "eventHubNamespaceName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.eventHubNamespaceName.value), createObject('value', 'None'))]",
+          "functionAppIdentityName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').functionAppIdentityName), createObject('value', 'none'))]",
+          "keyVaultName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.keyVaultName.value), createObject('value', 'none'))]",
+          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').storageAccountName), createObject('value', 'none'))]",
+          "eventHubNamespaceName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.eventHubNamespaceName.value), createObject('value', 'none'))]",
           "tags": {
             "value": "[parameters('tags')]"
           }
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "languageVersion": "2.1-experimental",
           "contentVersion": "1.0.0.0",
           "metadata": {
-            "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
-            "_EXPERIMENTAL_FEATURES_ENABLED": [
-              "Extensibility"
-            ],
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "2063778641292263785"
+              "templateHash": "3759890741511968330"
             }
           },
           "parameters": {
@@ -2869,78 +2813,57 @@
               "defaultValue": "a638d3c7-ab3a-418d-83e6-5f17a39d4fde"
             }
           },
-          "resources": {
-            "keyVault": {
-              "existing": true,
-              "type": "Microsoft.KeyVault/vaults",
-              "apiVersion": "2021-06-01-preview",
-              "name": "[parameters('keyVaultName')]"
-            },
-            "storageAccount": {
-              "existing": true,
-              "type": "Microsoft.Storage/storageAccounts",
-              "apiVersion": "2023-05-01",
-              "name": "[parameters('storageAccountName')]"
-            },
-            "eventHubNamespace": {
-              "existing": true,
-              "type": "Microsoft.EventHub/namespaces",
-              "apiVersion": "2024-01-01",
-              "name": "[parameters('eventHubNamespaceName')]"
-            },
-            "functionIdentity": {
+          "resources": [
+            {
               "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
               "apiVersion": "2023-01-31",
               "name": "[parameters('functionAppIdentityName')]",
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]"
             },
-            "keyVaultRoleAssignment": {
+            {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
               "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), parameters('KeyVaultSecretsOfficerRoleId'), resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')))]",
               "properties": {
                 "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', parameters('KeyVaultSecretsOfficerRoleId'))]",
-                "principalId": "[reference('functionIdentity').principalId]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), '2023-01-31').principalId]",
                 "principalType": "[parameters('principalType')]"
               },
               "dependsOn": [
-                "functionIdentity",
-                "keyVault"
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName'))]"
               ]
             },
-            "storageAccountRoleAssignment": {
+            {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
               "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), parameters('StorageBlobDataOwnerRoleId'), resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')))]",
               "properties": {
                 "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', parameters('StorageBlobDataOwnerRoleId'))]",
-                "principalId": "[reference('functionIdentity').principalId]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), '2023-01-31').principalId]",
                 "principalType": "[parameters('principalType')]"
               },
               "dependsOn": [
-                "functionIdentity",
-                "storageAccount"
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName'))]"
               ]
             },
-            "eventHubNamespaceRoleAssignment": {
+            {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[format('Microsoft.EventHub/namespaces/{0}', parameters('eventHubNamespaceName'))]",
               "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), parameters('AzureEventHubsDataReceiverRoleId'), resourceId('Microsoft.EventHub/namespaces', parameters('eventHubNamespaceName')))]",
               "properties": {
                 "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', parameters('AzureEventHubsDataReceiverRoleId'))]",
-                "principalId": "[reference('functionIdentity').principalId]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), '2023-01-31').principalId]",
                 "principalType": "[parameters('principalType')]"
               },
               "dependsOn": [
-                "eventHubNamespace",
-                "functionIdentity"
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName'))]"
               ]
             }
-          },
+          ],
           "outputs": {
             "functionIdentityId": {
               "type": "string",
@@ -2952,11 +2875,11 @@
             },
             "functionIdentityClientId": {
               "type": "string",
-              "value": "[reference('functionIdentity').clientId]"
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), '2023-01-31').clientId]"
             },
             "functionIdentityPrincipalId": {
               "type": "string",
-              "value": "[reference('functionIdentity').principalId]"
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('functionAppIdentityName')), '2023-01-31').principalId]"
             }
           }
         }
@@ -2982,19 +2905,19 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "hostingPlanName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').hostingPlanName), createObject('value', 'None'))]",
-          "functionAppName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').functionAppName), createObject('value', 'None'))]",
-          "functionAppIdentityName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-entraLogFunctionIdentity-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.functionIdentityName.value), createObject('value', 'None'))]",
-          "packageURL": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').ioaPackageURL), createObject('value', 'None'))]",
-          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').storageAccountName), createObject('value', 'None'))]",
-          "eventHubNamespaceName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.eventHubNamespaceName.value), createObject('value', 'None'))]",
-          "eventHubName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').eventHubName), createObject('value', 'None'))]",
-          "virtualNetworkName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.virtualNetworkName.value), createObject('value', 'None'))]",
-          "virtualNetworkSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet2Id.value), createObject('value', 'None'))]",
-          "diagnosticSettingName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').functionAppDiagnosticSettingName), createObject('value', 'None'))]",
-          "csCID": "[if(parameters('deployIOA'), createObject('value', parameters('falconCID')), createObject('value', 'None'))]",
-          "csClientIdUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csClientIdUri.value), createObject('value', 'None'))]",
-          "csClientSecretUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csClientSecretUri.value), createObject('value', 'None'))]",
+          "hostingPlanName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').hostingPlanName), createObject('value', 'none'))]",
+          "functionAppName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').functionAppName), createObject('value', 'none'))]",
+          "functionAppIdentityName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-entraLogFunctionIdentity-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.functionIdentityName.value), createObject('value', 'none'))]",
+          "packageURL": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').ioaPackageURL), createObject('value', 'none'))]",
+          "storageAccountName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').storageAccountName), createObject('value', 'none'))]",
+          "eventHubNamespaceName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.eventHubNamespaceName.value), createObject('value', 'none'))]",
+          "eventHubName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').eventHubName), createObject('value', 'none'))]",
+          "virtualNetworkName": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.virtualNetworkName.value), createObject('value', 'none'))]",
+          "virtualNetworkSubnetId": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csSubnet2Id.value), createObject('value', 'none'))]",
+          "diagnosticSettingName": "[if(parameters('deployIOA'), createObject('value', variables('entraLogSettings').functionAppDiagnosticSettingName), createObject('value', 'none'))]",
+          "csCID": "[if(parameters('deployIOA'), createObject('value', parameters('falconCID')), createObject('value', 'none'))]",
+          "csClientIdUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csClientIdUri.value), createObject('value', 'none'))]",
+          "csClientSecretUri": "[if(parameters('deployIOA'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix'))), '2022-09-01').outputs.csClientSecretUri.value), createObject('value', 'none'))]",
           "tags": {
             "value": "[parameters('tags')]"
           }
@@ -3299,8 +3222,8 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "falconClientId": "[if(parameters('deployIOA'), createObject('value', parameters('falconClientId')), createObject('value', 'None'))]",
-          "falconClientSecret": "[if(parameters('deployIOA'), createObject('value', parameters('falconClientSecret')), createObject('value', 'None'))]",
+          "falconClientId": "[if(parameters('deployIOA'), createObject('value', parameters('falconClientId')), createObject('value', 'none'))]",
+          "falconClientSecret": "[if(parameters('deployIOA'), createObject('value', parameters('falconClientSecret')), createObject('value', 'none'))]",
           "falconCloudRegion": "[if(parameters('deployIOA'), createObject('value', parameters('falconCloudRegion')), createObject('value', 'US-1'))]",
           "tags": {
             "value": "[parameters('tags')]"
@@ -3388,15 +3311,15 @@
   "outputs": {
     "eventHubAuthorizationRuleId": {
       "type": "string",
-      "value": "[if(parameters('deployIOA'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.eventHubAuthorizationRuleId.value, 'None')]"
+      "value": "[if(parameters('deployIOA'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.eventHubAuthorizationRuleId.value, 'none')]"
     },
     "activityLogEventHubName": {
       "type": "string",
-      "value": "[if(parameters('deployIOA'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.activityLogEventHubName.value, 'None')]"
+      "value": "[if(parameters('deployIOA'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.activityLogEventHubName.value, 'none')]"
     },
     "entraLogEventHubName": {
       "type": "string",
-      "value": "[if(parameters('deployIOA'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.entraLogEventHubName.value, 'None')]"
+      "value": "[if(parameters('deployIOA'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix'))), '2022-09-01').outputs.entraLogEventHubName.value, 'none')]"
     }
   }
 }

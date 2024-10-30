@@ -43,6 +43,7 @@ param uamiName string
 param uamiResourceId string
 
 param deployIOA bool = false
+param deployIOM bool = true
 
 param randomSuffix string = uniqueString(ioaResourceGroupName)
 
@@ -134,44 +135,45 @@ resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30'  exi
 }
 
 // Create Azure Account in CrowdStrike
-module script './modules/azureAccount.bicep' = {
+module script './modules/azureAccount.bicep' = if (deployIOM) {
   scope: resourceGroup(iomRg.name)
   name: 'cs-iom-account-deployment-${deploymentNameSuffix}'
   params: {
-    falconClientId: falconClientId
-    falconClientSecret: falconClientSecret
-    appRegistration: appRegistrationAppId
-    subscriptionId: subscriptionId
+    falconClientId: deployIOM ? falconClientId : 'none'
+    falconClientSecret: deployIOM ? falconClientSecret : 'none'
+    appRegistration: deployIOM ? appRegistrationAppId : 'none'
+    subscriptionId: deployIOM ? subscriptionId : 'none'
   }
   dependsOn: [
     policyExemptions
   ]
 }
 
-module iomKeyVault './modules/iomKeyVault.bicep' = {
+module iomKeyVault './modules/iomKeyVault.bicep' = if (deployIOM) {
   scope: resourceGroup(iomRg.name)
   name: 'cs-iom-keyvault-deployment-${deploymentNameSuffix}'
   params: {
-    keyVaultName: iomKeyVaultName
-    falconClientId: falconClientId
-    falconClientSecret: falconClientSecret
-    cspmCertificate: script.outputs.text
+    keyVaultName: deployIOM ? iomKeyVaultName : 'none'
+    falconClientId: deployIOM ? falconClientId : 'none'
+    falconClientSecret: deployIOM ? falconClientSecret : 'none'
+    cspmCertificate: deployIOM ? script.outputs.text : 'none'
   }
   dependsOn: [
-    policyExemptions]
+    policyExemptions
+  ]
 }
 
 
 // ADD CERTIFICATE TO REGISTRATION USING DEPLOYMENT SCRIPT 
-module certificate './modules/certificate.bicep' = {
+module certificate './modules/certificate.bicep' = if (deployIOM) {
   scope: resourceGroup(iomRg.name)
   name: 'cs-iom-cert-deployment-${deploymentNameSuffix}'
   params: {
-    location: location
-    appRegistrationId: appRegistrationAppId
-    cspmCertificate: script.outputs.text
-    userAssignedIdentityName: uami.name
-    userAssignedIdentityResourceGroupName: split(uami.id, '/')[4]
+    location: deployIOM ? location : 'none'
+    appRegistrationId: deployIOM ? appRegistrationAppId : 'none'
+    cspmCertificate: deployIOM ? script.outputs.text : 'none'
+    userAssignedIdentityName: deployIOM ? uami.name : 'none'
+    userAssignedIdentityResourceGroupName: deployIOM ? split(uami.id, '/')[4] : 'none'
   }
   dependsOn: [
     iomKeyVault
@@ -185,10 +187,10 @@ module certificate './modules/certificate.bicep' = {
 //'acdd72a7-3385-48ef-bd42-f606fba81ae7' // Reader 
 //'de139f84-1756-47ae-9be6-808fbbe84772' // Website Contributor 
 //'7f6c6a51-bcf8-42ba-9220-52d62157d7db' // Azure Kubernetes Service RBAC Reader
-module roleAssignment './modules/roleAssignment.bicep' = {
+module roleAssignment './modules/roleAssignment.bicep' = if (deployIOM) {
   name: 'cs-iom-role-${deploymentNameSuffix}'
   params: {
-    principalId: appRegistrationAppId
+    principalId: deployIOM ? appRegistrationAppId : 'none'
   }
   dependsOn: [
     iomKeyVault
@@ -206,10 +208,10 @@ module keyVault './modules/keyVault.bicep'= if (deployIOA) {
   scope: resourceGroup(ioaRg.name)
   name: 'cs-ioa-keyvault-deployment-${deploymentNameSuffix}'
   params: {
-    keyVaultName:  deployIOA ? ioaKeyVaultName : 'None'
-    falconClientId: deployIOA ? falconClientId : 'None'
-    falconClientSecret: deployIOA ? falconClientSecret : 'None'
-    virtualNetworkName: deployIOA ? virtualNetwork.outputs.virtualNetworkName : 'None'
+    keyVaultName:  deployIOA ? ioaKeyVaultName : 'none'
+    falconClientId: deployIOA ? falconClientId : 'none'
+    falconClientSecret: deployIOA ? falconClientSecret : 'none'
+    virtualNetworkName: deployIOA ? virtualNetwork.outputs.virtualNetworkName : 'none'
   }
   dependsOn: [
     virtualNetwork
@@ -222,7 +224,7 @@ module virtualNetwork './modules/virtualNetwork.bicep' = if (deployIOA) {
   name: '${deploymentNamePrefix}-virtualNetwork-${deploymentNameSuffix}'
   scope: resourceGroup(ioaRg.name)
   params: {
-    virtualNetworkName: deployIOA ? virtualNetworkName : 'None'
+    virtualNetworkName: deployIOA ? virtualNetworkName : 'none'
     tags: tags
   }
 }
@@ -232,10 +234,10 @@ module eventHub 'modules/eventHub.bicep' = if (deployIOA) {
   name: '${deploymentNamePrefix}-eventHubs-${deploymentNameSuffix}'
   scope: resourceGroup(ioaRg.name)
   params: {
-    eventHubNamespaceName: deployIOA ? eventHubNamespaceName : 'None'
-    activityLogEventHubName: deployIOA ? activityLogSettings.eventHubName : 'None'
-    entraLogEventHubName: deployIOA ? entraLogSettings.eventHubName : 'None'
-    virtualNetworkName: deployIOA ? virtualNetwork.outputs.virtualNetworkName : 'None'
+    eventHubNamespaceName: deployIOA ? eventHubNamespaceName : 'none'
+    activityLogEventHubName: deployIOA ? activityLogSettings.eventHubName : 'none'
+    entraLogEventHubName: deployIOA ? entraLogSettings.eventHubName : 'none'
+    virtualNetworkName: deployIOA ? virtualNetwork.outputs.virtualNetworkName : 'none'
     tags: deployIOA ? tags : {}
   }
   dependsOn: [
@@ -248,13 +250,13 @@ module csLogStorage 'modules/storageAccount.bicep' = if (deployIOA) {
   scope: resourceGroup(ioaRg.name)
   name: '${deploymentNamePrefix}-csLogStorage-${deploymentNameSuffix}'
   params: {
-    userAssignedIdentityName: deployIOA ? csLogSettings.storageAccountIdentityName : 'None'
-    storageAccountName: deployIOA ? csLogSettings.storageAccountName : 'None'
-    keyVaultName: deployIOA ? keyVault.outputs.keyVaultName : 'None'
-    storageAccountSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet1Id : 'None'
-    storagePrivateEndpointName: deployIOA ? csLogSettings.storagePrivateEndpointName : 'None'
-    storagePrivateEndpointConnectionName: deployIOA ? csLogSettings.storagePrivateEndpointConnectionName : 'None'
-    storagePrivateEndpointSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet3Id : 'None'
+    userAssignedIdentityName: deployIOA ? csLogSettings.storageAccountIdentityName : 'none'
+    storageAccountName: deployIOA ? csLogSettings.storageAccountName : 'none'
+    keyVaultName: deployIOA ? keyVault.outputs.keyVaultName : 'none'
+    storageAccountSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet1Id : 'none'
+    storagePrivateEndpointName: deployIOA ? csLogSettings.storagePrivateEndpointName : 'none'
+    storagePrivateEndpointConnectionName: deployIOA ? csLogSettings.storagePrivateEndpointConnectionName : 'none'
+    storagePrivateEndpointSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet3Id : 'none'
     tags: deployIOA ? tags : {}
   }
   dependsOn: [
@@ -267,10 +269,10 @@ module csLogStorageEncryption 'modules/enableEncryption.bicep' = if (deployIOA) 
   name: '${deploymentNamePrefix}-csLogStorageEncryption-${deploymentNameSuffix}'
   scope: resourceGroup(ioaResourceGroupName)
   params: {
-    userAssignedIdentity: deployIOA ? csLogStorage.outputs.userAssignedIdentityId : 'None'
-    storageAccountName: deployIOA ? csLogStorage.outputs.storageAccountName : 'None'
-    keyName: deployIOA ? keyVault.outputs.csLogStorageKeyName : 'None'
-    keyVaultUri: deployIOA ? keyVault.outputs.keyVaultUri : 'None'
+    userAssignedIdentity: deployIOA ? csLogStorage.outputs.userAssignedIdentityId : 'none'
+    storageAccountName: deployIOA ? csLogStorage.outputs.storageAccountName : 'none'
+    keyName: deployIOA ? keyVault.outputs.csLogStorageKeyName : 'none'
+    keyVaultUri: deployIOA ? keyVault.outputs.keyVaultUri : 'none'
   }
   dependsOn: [
     policyExemptions
@@ -282,8 +284,8 @@ module keyVaultDiagnosticSetting 'modules/keyVaultDiagnosticSetting.bicep' = if 
   name: '${deploymentNamePrefix}-keyVaultDiagnosticSetting-${deploymentNameSuffix}'
   scope: resourceGroup(ioaResourceGroupName)
   params: {
-    keyVaultName: deployIOA ? keyVault.outputs.keyVaultName : 'None'
-    storageAccountName: deployIOA ? csLogStorage.outputs.storageAccountName : 'None'
+    keyVaultName: deployIOA ? keyVault.outputs.keyVaultName : 'none'
+    storageAccountName: deployIOA ? csLogStorage.outputs.storageAccountName : 'none'
   }
   dependsOn: [
     csLogStorage
@@ -297,13 +299,13 @@ module activityLogStorage 'modules/storageAccount.bicep' =if (deployIOA)  {
   scope: resourceGroup(ioaRg.name)
   name: '${deploymentNamePrefix}-activityLogStorage-${deploymentNameSuffix}'
   params: {
-    userAssignedIdentityName: deployIOA ? activityLogSettings.storageAccountIdentityName : 'None'
-    storageAccountName: deployIOA ? activityLogSettings.storageAccountName : 'None'
-    keyVaultName: deployIOA ? keyVault.outputs.keyVaultName : 'None'
-    storageAccountSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet1Id : 'None'
-    storagePrivateEndpointName: deployIOA ? activityLogSettings.storagePrivateEndpointName : 'None'
-    storagePrivateEndpointConnectionName:deployIOA ? activityLogSettings.storagePrivateEndpointConnectionName : 'None'
-    storagePrivateEndpointSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet3Id : 'None'
+    userAssignedIdentityName: deployIOA ? activityLogSettings.storageAccountIdentityName : 'none'
+    storageAccountName: deployIOA ? activityLogSettings.storageAccountName : 'none'
+    keyVaultName: deployIOA ? keyVault.outputs.keyVaultName : 'none'
+    storageAccountSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet1Id : 'none'
+    storagePrivateEndpointName: deployIOA ? activityLogSettings.storagePrivateEndpointName : 'none'
+    storagePrivateEndpointConnectionName:deployIOA ? activityLogSettings.storagePrivateEndpointConnectionName : 'none'
+    storagePrivateEndpointSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet3Id : 'none'
     tags: deployIOA ? tags : {}
   }
   dependsOn: [
@@ -316,10 +318,10 @@ module activityLogStorageEncryption 'modules/enableEncryption.bicep' = if (deplo
   name: '${deploymentNamePrefix}-activityLogStorageEncryption-${deploymentNameSuffix}'
   scope: resourceGroup(ioaRg.name)
   params: {
-    userAssignedIdentity: deployIOA ?  activityLogStorage.outputs.userAssignedIdentityId : 'None'
-    storageAccountName: deployIOA ? activityLogStorage.outputs.storageAccountName : 'None'
-    keyName: deployIOA ? keyVault.outputs.activityLogStorageKeyName : 'None'
-    keyVaultUri: deployIOA ? keyVault.outputs.keyVaultUri : 'None'
+    userAssignedIdentity: deployIOA ?  activityLogStorage.outputs.userAssignedIdentityId : 'none'
+    storageAccountName: deployIOA ? activityLogStorage.outputs.storageAccountName : 'none'
+    keyName: deployIOA ? keyVault.outputs.activityLogStorageKeyName : 'none'
+    keyVaultUri: deployIOA ? keyVault.outputs.keyVaultUri : 'none'
     tags: deployIOA ? tags : {}
   }
   dependsOn: [
@@ -332,13 +334,13 @@ module entraLogStorage 'modules/storageAccount.bicep' = if (deployIOA) {
   scope: resourceGroup(ioaRg.name)
   name: '${deploymentNamePrefix}-entraLogStorage-${deploymentNameSuffix}'
   params: {
-    userAssignedIdentityName: deployIOA ? entraLogSettings.storageAccountIdentityName : 'None'
-    storageAccountName: deployIOA ? entraLogSettings.storageAccountName : 'None'
-    keyVaultName: deployIOA ? keyVault.outputs.keyVaultName : 'None'
-    storageAccountSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet2Id : 'None'
-    storagePrivateEndpointName: deployIOA ? entraLogSettings.storagePrivateEndpointName : 'None'
-    storagePrivateEndpointConnectionName: deployIOA ? entraLogSettings.storagePrivateEndpointConnectionName : 'None'
-    storagePrivateEndpointSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet3Id : 'None'
+    userAssignedIdentityName: deployIOA ? entraLogSettings.storageAccountIdentityName : 'none'
+    storageAccountName: deployIOA ? entraLogSettings.storageAccountName : 'none'
+    keyVaultName: deployIOA ? keyVault.outputs.keyVaultName : 'none'
+    storageAccountSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet2Id : 'none'
+    storagePrivateEndpointName: deployIOA ? entraLogSettings.storagePrivateEndpointName : 'none'
+    storagePrivateEndpointConnectionName: deployIOA ? entraLogSettings.storagePrivateEndpointConnectionName : 'none'
+    storagePrivateEndpointSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet3Id : 'none'
     tags: deployIOA? tags : {}
   }
   dependsOn: [
@@ -351,10 +353,10 @@ module entraLogStorageEncryption 'modules/enableEncryption.bicep' = if (deployIO
   name: '${deploymentNamePrefix}-entraLogStorageEncryption-${deploymentNameSuffix}'
   scope: resourceGroup(ioaRg.name)
   params: {
-    userAssignedIdentity: deployIOA ? entraLogStorage.outputs.userAssignedIdentityId : 'None'
-    storageAccountName: deployIOA ? entraLogStorage.outputs.storageAccountName : 'None'
-    keyName: deployIOA ? keyVault.outputs.activityLogStorageKeyName : 'None'
-    keyVaultUri: deployIOA ? keyVault.outputs.keyVaultUri : 'None'
+    userAssignedIdentity: deployIOA ? entraLogStorage.outputs.userAssignedIdentityId : 'none'
+    storageAccountName: deployIOA ? entraLogStorage.outputs.storageAccountName : 'none'
+    keyName: deployIOA ? keyVault.outputs.activityLogStorageKeyName : 'none'
+    keyVaultUri: deployIOA ? keyVault.outputs.keyVaultUri : 'none'
     tags: deployIOA ? tags: {}
   }
   dependsOn: [
@@ -367,10 +369,10 @@ module activityLogFunctionIdentity 'modules/functionIdentity.bicep' = if (deploy
   name: '${deploymentNamePrefix}-activityLogFunctionIdentity-${deploymentNameSuffix}'
   scope: resourceGroup(ioaRg.name)
   params: {
-    functionAppIdentityName: deployIOA ? activityLogSettings.functionAppIdentityName : 'None'
-    keyVaultName: deployIOA ? keyVault.outputs.keyVaultName : 'None'
-    storageAccountName: deployIOA ? activityLogSettings.storageAccountName : 'None'
-    eventHubNamespaceName: deployIOA ? eventHub.outputs.eventHubNamespaceName : 'None'
+    functionAppIdentityName: deployIOA ? activityLogSettings.functionAppIdentityName : 'none'
+    keyVaultName: deployIOA ? keyVault.outputs.keyVaultName : 'none'
+    storageAccountName: deployIOA ? activityLogSettings.storageAccountName : 'none'
+    eventHubNamespaceName: deployIOA ? eventHub.outputs.eventHubNamespaceName : 'none'
     tags: deployIOA ? tags : {} 
   }
   dependsOn: [
@@ -385,19 +387,19 @@ module activityLogFunction 'modules/functionApp.bicep' = if (deployIOA) {
   name: '${deploymentNamePrefix}-activityLogFunction-${deploymentNameSuffix}'
   scope: resourceGroup(ioaRg.name)
   params: {
-    hostingPlanName: deployIOA ? activityLogSettings.hostingPlanName : 'None'
-    functionAppName: deployIOA ? activityLogSettings.functionAppName : 'None'
-    functionAppIdentityName: deployIOA ? activityLogFunctionIdentity.outputs.functionIdentityName : 'None'
-    packageURL: deployIOA ? activityLogSettings.ioaPackageURL : 'None'
-    storageAccountName: deployIOA ? activityLogSettings.storageAccountName : 'None'
-    eventHubNamespaceName: deployIOA ? eventHub.outputs.eventHubNamespaceName : 'None'
-    eventHubName: deployIOA ? activityLogSettings.eventHubName : 'None'
-    virtualNetworkName: deployIOA ? virtualNetwork.outputs.virtualNetworkName : 'None'
-    virtualNetworkSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet1Id : 'None'
-    diagnosticSettingName: deployIOA ? activityLogSettings.functionAppDiagnosticSettingName : 'None'
-    csCID: deployIOA ? falconCID : 'None'
-    csClientIdUri: deployIOA ? keyVault.outputs.csClientIdUri : 'None'
-    csClientSecretUri: deployIOA ? keyVault.outputs.csClientSecretUri : 'None'
+    hostingPlanName: deployIOA ? activityLogSettings.hostingPlanName : 'none'
+    functionAppName: deployIOA ? activityLogSettings.functionAppName : 'none'
+    functionAppIdentityName: deployIOA ? activityLogFunctionIdentity.outputs.functionIdentityName : 'none'
+    packageURL: deployIOA ? activityLogSettings.ioaPackageURL : 'none'
+    storageAccountName: deployIOA ? activityLogSettings.storageAccountName : 'none'
+    eventHubNamespaceName: deployIOA ? eventHub.outputs.eventHubNamespaceName : 'none'
+    eventHubName: deployIOA ? activityLogSettings.eventHubName : 'none'
+    virtualNetworkName: deployIOA ? virtualNetwork.outputs.virtualNetworkName : 'none'
+    virtualNetworkSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet1Id : 'none'
+    diagnosticSettingName: deployIOA ? activityLogSettings.functionAppDiagnosticSettingName : 'none'
+    csCID: deployIOA ? falconCID : 'none'
+    csClientIdUri: deployIOA ? keyVault.outputs.csClientIdUri : 'none'
+    csClientSecretUri: deployIOA ? keyVault.outputs.csClientSecretUri : 'none'
     tags: deployIOA ? tags  : {}
   }
   dependsOn: [
@@ -413,10 +415,10 @@ module entraLogFunctionIdentity 'modules/functionIdentity.bicep' = if (deployIOA
   name: '${deploymentNamePrefix}-entraLogFunctionIdentity-${deploymentNameSuffix}'
   scope: resourceGroup(ioaRg.name)
   params: {
-    functionAppIdentityName: deployIOA ? entraLogSettings.functionAppIdentityName: 'None'
-    keyVaultName: deployIOA ? keyVault.outputs.keyVaultName : 'None'
-    storageAccountName: deployIOA ? entraLogSettings.storageAccountName : 'None'
-    eventHubNamespaceName: deployIOA ? eventHub.outputs.eventHubNamespaceName : 'None'
+    functionAppIdentityName: deployIOA ? entraLogSettings.functionAppIdentityName: 'none'
+    keyVaultName: deployIOA ? keyVault.outputs.keyVaultName : 'none'
+    storageAccountName: deployIOA ? entraLogSettings.storageAccountName : 'none'
+    eventHubNamespaceName: deployIOA ? eventHub.outputs.eventHubNamespaceName : 'none'
     tags: tags
   }
   dependsOn: [
@@ -431,19 +433,19 @@ module entraLogFunction 'modules/functionApp.bicep' = if (deployIOA) {
   name: '${deploymentNamePrefix}-entraLogFunction-${deploymentNameSuffix}'
   scope: resourceGroup(ioaRg.name)
   params: {
-    hostingPlanName: deployIOA ? entraLogSettings.hostingPlanName : 'None'
-    functionAppName: deployIOA ? entraLogSettings.functionAppName : 'None'
-    functionAppIdentityName: deployIOA ? entraLogFunctionIdentity.outputs.functionIdentityName : 'None'
-    packageURL: deployIOA ? entraLogSettings.ioaPackageURL : 'None'
-    storageAccountName: deployIOA ? entraLogSettings.storageAccountName : 'None'
-    eventHubNamespaceName: deployIOA ? eventHub.outputs.eventHubNamespaceName : 'None'
-    eventHubName: deployIOA ? entraLogSettings.eventHubName : 'None'
-    virtualNetworkName: deployIOA ? virtualNetwork.outputs.virtualNetworkName : 'None'
-    virtualNetworkSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet2Id : 'None'
-    diagnosticSettingName: deployIOA ? entraLogSettings.functionAppDiagnosticSettingName : 'None'
-    csCID: deployIOA ? falconCID : 'None'
-    csClientIdUri: deployIOA ?  keyVault.outputs.csClientIdUri : 'None'
-    csClientSecretUri:  deployIOA ? keyVault.outputs.csClientSecretUri : 'None'
+    hostingPlanName: deployIOA ? entraLogSettings.hostingPlanName : 'none'
+    functionAppName: deployIOA ? entraLogSettings.functionAppName : 'none'
+    functionAppIdentityName: deployIOA ? entraLogFunctionIdentity.outputs.functionIdentityName : 'none'
+    packageURL: deployIOA ? entraLogSettings.ioaPackageURL : 'none'
+    storageAccountName: deployIOA ? entraLogSettings.storageAccountName : 'none'
+    eventHubNamespaceName: deployIOA ? eventHub.outputs.eventHubNamespaceName : 'none'
+    eventHubName: deployIOA ? entraLogSettings.eventHubName : 'none'
+    virtualNetworkName: deployIOA ? virtualNetwork.outputs.virtualNetworkName : 'none'
+    virtualNetworkSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet2Id : 'none'
+    diagnosticSettingName: deployIOA ? entraLogSettings.functionAppDiagnosticSettingName : 'none'
+    csCID: deployIOA ? falconCID : 'none'
+    csClientIdUri: deployIOA ?  keyVault.outputs.csClientIdUri : 'none'
+    csClientSecretUri:  deployIOA ? keyVault.outputs.csClientSecretUri : 'none'
     tags: tags
   }
   dependsOn: [
@@ -465,8 +467,8 @@ module entraLogFunction 'modules/functionApp.bicep' = if (deployIOA) {
 resource activityDiagnosticSetttings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (deployActivityLogDiagnosticSettings && deployIOA) {
   name: activityLogSettings.diagnosticSetttingsName
   properties: {
-    eventHubAuthorizationRuleId: (deployIOA && deployActivityLogDiagnosticSettings) ? eventHub.outputs.eventHubAuthorizationRuleId : 'None'
-    eventHubName: (deployIOA && deployActivityLogDiagnosticSettings) ? activityLogSettings.eventHubName : 'None'
+    eventHubAuthorizationRuleId: (deployIOA && deployActivityLogDiagnosticSettings) ? eventHub.outputs.eventHubAuthorizationRuleId : 'none'
+    eventHubName: (deployIOA && deployActivityLogDiagnosticSettings) ? activityLogSettings.eventHubName : 'none'
     logs: [
       {
         category: 'Administrative'
@@ -577,8 +579,8 @@ module setAzureDefaultSubscription './modules/defaultSubscription.bicep' = if (d
   scope: resourceGroup(ioaRg.name)
   name: '${deploymentNamePrefix}-defaultSubscription-${deploymentNameSuffix}'
   params: {
-    falconClientId: deployIOA ? falconClientId : 'None'
-    falconClientSecret: deployIOA ? falconClientSecret : 'None'
+    falconClientId: deployIOA ? falconClientId : 'none'
+    falconClientSecret: deployIOA ? falconClientSecret : 'none'
     falconCloudRegion: deployIOA ? falconCloudRegion : 'US-1'
     tags: tags
   }
@@ -590,6 +592,6 @@ module setAzureDefaultSubscription './modules/defaultSubscription.bicep' = if (d
 }
 
 /* Deployment outputs required for follow-up activities */
-output eventHubAuthorizationRuleId string = deployIOA ? eventHub.outputs.eventHubAuthorizationRuleId : 'None'
-output activityLogEventHubName string = deployIOA ? eventHub.outputs.activityLogEventHubName: 'None'
-output entraLogEventHubName string = deployIOA ? eventHub.outputs.entraLogEventHubName: 'None'
+output eventHubAuthorizationRuleId string = deployIOA ? eventHub.outputs.eventHubAuthorizationRuleId : 'none'
+output activityLogEventHubName string = deployIOA ? eventHub.outputs.activityLogEventHubName: 'none'
+output entraLogEventHubName string = deployIOA ? eventHub.outputs.entraLogEventHubName: 'none'
