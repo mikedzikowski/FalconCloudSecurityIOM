@@ -46,6 +46,9 @@ param deployIOA bool = false
 
 param randomSuffix string = uniqueString(ioaResourceGroupName)
 
+@description('The array of policy assignment IDs to exempt to prevent issues with the build process.')
+param exemptPolicyAssignmentIds array = []
+
 @description('The Falcon cloud region.')
 @allowed([
   'US-1'
@@ -97,11 +100,23 @@ var entraLogSettings = {
   eventHubName: 'cs-eventhub-monitor-aad-logs' // DO NOT CHANGE - used for registration validation
   diagnosticSetttingsName: 'cs-aad-to-eventhub' // DO NOT CHANGE - used for registration validation
 }
+
 var subscriptionId = subscription().subscriptionId
-var ioaKeyVaultName = 'kv-ioa1-${uniqueString(ioaResourceGroupName)}'
-var iomKeyVaultName = 'kv-iom1-${uniqueString(iomResourceGroupName)}'
+var ioaKeyVaultName = 'kv-ioa-${uniqueString(ioaResourceGroupName)}'
+var iomKeyVaultName = 'kv-iom-${uniqueString(iomResourceGroupName)}'
 var eventHubNamespaceName = 'cs-horizon-ns-${subscriptionId}' // DO NOT CHANGE - used for registration validation
 var virtualNetworkName = 'cs-vnet'
+
+module policyExemptions './modules/exemptions.bicep' = [
+  for i in range(0, length(exemptPolicyAssignmentIds)): if (!empty((exemptPolicyAssignmentIds)[0])) {
+    name: 'PolicyExemption_${i}'
+    scope: resourceGroup(subscriptionId, iomRg.name)
+    params: {
+      policyAssignmentId: exemptPolicyAssignmentIds[i]
+    }
+  }
+]
+
 
 resource iomRg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: iomResourceGroupName
@@ -128,6 +143,9 @@ module script './modules/azureAccount.bicep' = {
     appRegistration: appRegistrationAppId
     subscriptionId: subscriptionId
   }
+  dependsOn: [
+    policyExemptions
+  ]
 }
 
 module iomKeyVault './modules/iomKeyVault.bicep' = {
@@ -139,6 +157,8 @@ module iomKeyVault './modules/iomKeyVault.bicep' = {
     falconClientSecret: falconClientSecret
     cspmCertificate: script.outputs.text
   }
+  dependsOn: [
+    policyExemptions]
 }
 
 
@@ -155,6 +175,7 @@ module certificate './modules/certificate.bicep' = {
   }
   dependsOn: [
     iomKeyVault
+    policyExemptions
   ]
 }
 
@@ -173,6 +194,7 @@ module roleAssignment './modules/roleAssignment.bicep' = {
     iomKeyVault
     script
     certificate
+    policyExemptions
   ]
 }
 
@@ -191,6 +213,7 @@ module keyVault './modules/keyVault.bicep'= if (deployIOA) {
   }
   dependsOn: [
     virtualNetwork
+    policyExemptions
   ]
 }
 
@@ -215,6 +238,9 @@ module eventHub 'modules/eventHub.bicep' = if (deployIOA) {
     virtualNetworkName: deployIOA ? virtualNetwork.outputs.virtualNetworkName : 'None'
     tags: deployIOA ? tags : {}
   }
+  dependsOn: [
+    policyExemptions
+  ]
 }
 
 /* Create CrowdStrike Log Storage Account */
@@ -231,6 +257,9 @@ module csLogStorage 'modules/storageAccount.bicep' = if (deployIOA) {
     storagePrivateEndpointSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet3Id : 'None'
     tags: deployIOA ? tags : {}
   }
+  dependsOn: [
+    policyExemptions
+  ]
 }
 
 /* Enable CrowdStrike Log Storage Account Encryption */
@@ -243,6 +272,9 @@ module csLogStorageEncryption 'modules/enableEncryption.bicep' = if (deployIOA) 
     keyName: deployIOA ? keyVault.outputs.csLogStorageKeyName : 'None'
     keyVaultUri: deployIOA ? keyVault.outputs.keyVaultUri : 'None'
   }
+  dependsOn: [
+    policyExemptions
+  ]
 }
 
 /* Create KeyVault Diagnostic Setting to CrowdStrike Log Storage Account */
@@ -256,6 +288,7 @@ module keyVaultDiagnosticSetting 'modules/keyVaultDiagnosticSetting.bicep' = if 
   dependsOn: [
     csLogStorage
     csLogStorageEncryption
+    policyExemptions
   ]
 }
 
@@ -273,6 +306,9 @@ module activityLogStorage 'modules/storageAccount.bicep' =if (deployIOA)  {
     storagePrivateEndpointSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet3Id : 'None'
     tags: deployIOA ? tags : {}
   }
+  dependsOn: [
+    policyExemptions
+  ]
 }
 
 /* Enable Activity Log Diagnostic Storage Account Encryption */
@@ -286,6 +322,9 @@ module activityLogStorageEncryption 'modules/enableEncryption.bicep' = if (deplo
     keyVaultUri: deployIOA ? keyVault.outputs.keyVaultUri : 'None'
     tags: deployIOA ? tags : {}
   }
+  dependsOn: [
+    policyExemptions
+  ]
 }
 
 /* Create Entra ID Log Diagnostic Storage Account */
@@ -302,6 +341,9 @@ module entraLogStorage 'modules/storageAccount.bicep' = if (deployIOA) {
     storagePrivateEndpointSubnetId: deployIOA ? virtualNetwork.outputs.csSubnet3Id : 'None'
     tags: deployIOA? tags : {}
   }
+  dependsOn: [
+    policyExemptions
+  ]
 }
 
 /* Enable Entra ID Log Diagnostic Storage Account Encryption */
@@ -315,6 +357,9 @@ module entraLogStorageEncryption 'modules/enableEncryption.bicep' = if (deployIO
     keyVaultUri: deployIOA ? keyVault.outputs.keyVaultUri : 'None'
     tags: deployIOA ? tags: {}
   }
+  dependsOn: [
+    policyExemptions
+  ]
 }
 
 /* Create User-Assigned Managed Identity for Activity Log Diagnostic Function */
@@ -331,6 +376,7 @@ module activityLogFunctionIdentity 'modules/functionIdentity.bicep' = if (deploy
   dependsOn: [
     activityLogStorage
     activityLogStorageEncryption
+    policyExemptions
   ]
 }
 
@@ -358,6 +404,7 @@ module activityLogFunction 'modules/functionApp.bicep' = if (deployIOA) {
     activityLogStorage
     activityLogStorageEncryption
     activityLogFunctionIdentity
+    policyExemptions
   ]
 }
 
@@ -375,6 +422,7 @@ module entraLogFunctionIdentity 'modules/functionIdentity.bicep' = if (deployIOA
   dependsOn: [
     entraLogStorage
     entraLogStorageEncryption
+    policyExemptions
   ]
 }
 
@@ -402,6 +450,7 @@ module entraLogFunction 'modules/functionApp.bicep' = if (deployIOA) {
     entraLogStorage
     entraLogStorageEncryption
     entraLogFunctionIdentity
+    policyExemptions
   ]
 }
 
@@ -536,6 +585,7 @@ module setAzureDefaultSubscription './modules/defaultSubscription.bicep' = if (d
   dependsOn: [
     script
     certificate
+    policyExemptions
   ]
 }
 

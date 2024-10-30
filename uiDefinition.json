@@ -234,7 +234,11 @@
                             "type": "Microsoft.Common.TagsByResource",
                             "resources": [
                                 "Microsoft.Storage/storageAccounts",
-                                "Microsoft.Compute/virtualMachines"
+                                "Microsoft.Compute/virtualMachines",
+                                "Microsoft.Network/virtualNetworks",
+                                "Microsoft.EventHub/namespaces",
+                                "Microsoft.Web/sites",
+                                "Microsoft.Network/privateEndpoints"
                             ]
                         }
                     ]
@@ -257,7 +261,8 @@
                 "falconClientSecret": "[steps('falconCloudSecurity').credentials.falconClientSecret]",
                 "tagsByResource": "[steps('tags').tagsByResource]",
                 "uamiName": "[steps('iom').iomDeployment.managedIdentity.name]",
-                "uamiResourceId": "[steps('iom').iomDeployment.managedIdentity.id]"
+                "uamiResourceId": "[steps('iom').iomDeployment.managedIdentity.id]",
+                "exemptPolicyAssignmentIds": "[map(steps('iom').iomDeployment.exemption, (item) => item.id)]"
             }
         }
     }

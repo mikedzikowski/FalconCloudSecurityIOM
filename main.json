@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "15348980937171746348"
+      "templateHash": "2042694539221926924"
     }
   },
   "parameters": {
@@ -99,6 +99,13 @@
       "type": "string",
       "defaultValue": "[uniqueString(parameters('ioaResourceGroupName'))]"
     },
+    "exemptPolicyAssignmentIds": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "The array of policy assignment IDs to exempt to prevent issues with the build process."
+      }
+    },
     "falconCloudRegion": {
       "type": "string",
       "defaultValue": "US-1",
@@ -160,8 +167,8 @@
       "diagnosticSetttingsName": "cs-aad-to-eventhub"
     },
     "subscriptionId": "[subscription().subscriptionId]",
-    "ioaKeyVaultName": "[format('kv-ioa1-{0}', uniqueString(parameters('ioaResourceGroupName')))]",
-    "iomKeyVaultName": "[format('kv-iom1-{0}', uniqueString(parameters('iomResourceGroupName')))]",
+    "ioaKeyVaultName": "[format('kv-ioa-{0}', uniqueString(parameters('ioaResourceGroupName')))]",
+    "iomKeyVaultName": "[format('kv-iom-{0}', uniqueString(parameters('iomResourceGroupName')))]",
     "eventHubNamespaceName": "[format('cs-horizon-ns-{0}', variables('subscriptionId'))]",
     "virtualNetworkName": "cs-vnet"
   },
@@ -223,6 +230,66 @@
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "policyExemptions",
+        "count": "[length(range(0, length(parameters('exemptPolicyAssignmentIds'))))]"
+      },
+      "condition": "[not(empty(parameters('exemptPolicyAssignmentIds')[0]))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('PolicyExemption_{0}', range(0, length(parameters('exemptPolicyAssignmentIds')))[copyIndex()])]",
+      "subscriptionId": "[variables('subscriptionId')]",
+      "resourceGroup": "[parameters('iomResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "policyAssignmentId": {
+            "value": "[parameters('exemptPolicyAssignmentIds')[range(0, length(parameters('exemptPolicyAssignmentIds')))[copyIndex()]]]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.30.23.60470",
+              "templateHash": "1195587575101626735"
+            }
+          },
+          "parameters": {
+            "policyAssignmentId": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/policyExemptions",
+              "apiVersion": "2022-07-01-preview",
+              "name": "exempt-cspm-resource-group",
+              "properties": {
+                "assignmentScopeValidation": "Default",
+                "description": "Exempts the resource group to prevent issues with deploying FCS CSPM.",
+                "displayName": "IOM and IOA Resource Group Exemption",
+                "exemptionCategory": "Mitigated",
+                "expiresOn": null,
+                "metadata": null,
+                "policyAssignmentId": "[parameters('policyAssignmentId')]",
+                "policyDefinitionReferenceIds": [],
+                "resourceSelectors": []
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('iomResourceGroupName'))]"
       ]
     },
     {
@@ -305,7 +372,8 @@
         }
       },
       "dependsOn": [
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('iomResourceGroupName'))]"
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('iomResourceGroupName'))]",
+        "policyExemptions"
       ]
     },
     {
@@ -443,6 +511,7 @@
       },
       "dependsOn": [
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('iomResourceGroupName'))]",
+        "policyExemptions",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('iomResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-iom-account-deployment-{0}', parameters('deploymentNameSuffix')))]"
       ]
     },
@@ -528,6 +597,7 @@
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('iomResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-iom-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('iomResourceGroupName'))]",
+        "policyExemptions",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('iomResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-iom-account-deployment-{0}', parameters('deploymentNameSuffix')))]"
       ]
     },
@@ -596,6 +666,7 @@
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('iomResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-iom-cert-deployment-{0}', parameters('deploymentNameSuffix')))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('iomResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-iom-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
+        "policyExemptions",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('iomResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-iom-account-deployment-{0}', parameters('deploymentNameSuffix')))]"
       ]
     },
@@ -848,6 +919,7 @@
       },
       "dependsOn": [
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ioaResourceGroupName'))]",
+        "policyExemptions",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]"
       ]
     },
@@ -1187,6 +1259,7 @@
       },
       "dependsOn": [
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ioaResourceGroupName'))]",
+        "policyExemptions",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]"
       ]
     },
@@ -1429,6 +1502,7 @@
       "dependsOn": [
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ioaResourceGroupName'))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
+        "policyExemptions",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]"
       ]
     },
@@ -1451,17 +1525,12 @@
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "languageVersion": "2.1-experimental",
           "contentVersion": "1.0.0.0",
           "metadata": {
-            "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
-            "_EXPERIMENTAL_FEATURES_ENABLED": [
-              "Extensibility"
-            ],
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "4564981871156269948"
+              "templateHash": "12588247944315089708"
             }
           },
           "parameters": {
@@ -1486,8 +1555,8 @@
               "defaultValue": {}
             }
           },
-          "resources": {
-            "storageAccount": {
+          "resources": [
+            {
               "type": "Microsoft.Storage/storageAccounts",
               "apiVersion": "2023-05-01",
               "name": "[parameters('storageAccountName')]",
@@ -1510,12 +1579,13 @@
                 }
               }
             }
-          }
+          ]
         }
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-csLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
+        "policyExemptions"
       ]
     },
     {
@@ -1581,7 +1651,8 @@
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-csLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-csLogStorageEncryption-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
+        "policyExemptions"
       ]
     },
     {
@@ -1823,6 +1894,7 @@
       "dependsOn": [
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ioaResourceGroupName'))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
+        "policyExemptions",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]"
       ]
     },
@@ -1846,17 +1918,12 @@
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "languageVersion": "2.1-experimental",
           "contentVersion": "1.0.0.0",
           "metadata": {
-            "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
-            "_EXPERIMENTAL_FEATURES_ENABLED": [
-              "Extensibility"
-            ],
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "4564981871156269948"
+              "templateHash": "12588247944315089708"
             }
           },
           "parameters": {
@@ -1881,8 +1948,8 @@
               "defaultValue": {}
             }
           },
-          "resources": {
-            "storageAccount": {
+          "resources": [
+            {
               "type": "Microsoft.Storage/storageAccounts",
               "apiVersion": "2023-05-01",
               "name": "[parameters('storageAccountName')]",
@@ -1905,13 +1972,14 @@
                 }
               }
             }
-          }
+          ]
         }
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-activityLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ioaResourceGroupName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
+        "policyExemptions"
       ]
     },
     {
@@ -2153,6 +2221,7 @@
       "dependsOn": [
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ioaResourceGroupName'))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
+        "policyExemptions",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]"
       ]
     },
@@ -2176,17 +2245,12 @@
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "languageVersion": "2.1-experimental",
           "contentVersion": "1.0.0.0",
           "metadata": {
-            "_EXPERIMENTAL_WARNING": "This template uses ARM features that are experimental. Experimental features should be enabled for testing purposes only, as there are no guarantees about the quality or stability of these features. Do not enable these settings for any production usage, or your production environment may be subject to breaking.",
-            "_EXPERIMENTAL_FEATURES_ENABLED": [
-              "Extensibility"
-            ],
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "4564981871156269948"
+              "templateHash": "12588247944315089708"
             }
           },
           "parameters": {
@@ -2211,8 +2275,8 @@
               "defaultValue": {}
             }
           },
-          "resources": {
-            "storageAccount": {
+          "resources": [
+            {
               "type": "Microsoft.Storage/storageAccounts",
               "apiVersion": "2023-05-01",
               "name": "[parameters('storageAccountName')]",
@@ -2235,13 +2299,14 @@
                 }
               }
             }
-          }
+          ]
         }
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-entraLogStorage-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ioaResourceGroupName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
+        "policyExemptions"
       ]
     },
     {
@@ -2412,7 +2477,8 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-activityLogStorageEncryption-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ioaResourceGroupName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
+        "policyExemptions"
       ]
     },
     {
@@ -2726,6 +2792,7 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ioaResourceGroupName'))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
+        "policyExemptions",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]"
       ]
     },
@@ -2899,7 +2966,8 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-entraLogStorageEncryption-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ioaResourceGroupName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
+        "policyExemptions"
       ]
     },
     {
@@ -3215,6 +3283,7 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-eventHubs-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ioaResourceGroupName'))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-ioa-keyvault-deployment-{0}', parameters('deploymentNameSuffix')))]",
+        "policyExemptions",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ioaResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-virtualNetwork-{1}', parameters('deploymentNamePrefix'), parameters('deploymentNameSuffix')))]"
       ]
     },
@@ -3311,6 +3380,7 @@
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('iomResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-iom-cert-deployment-{0}', parameters('deploymentNameSuffix')))]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ioaResourceGroupName'))]",
+        "policyExemptions",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('iomResourceGroupName')), 'Microsoft.Resources/deployments', format('cs-iom-account-deployment-{0}', parameters('deploymentNameSuffix')))]"
       ]
     }
