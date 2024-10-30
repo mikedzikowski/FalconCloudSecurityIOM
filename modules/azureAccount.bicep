@@ -3,6 +3,9 @@ param falconClientId string
 @secure()
 param falconClientSecret string
 param appRegistration string
+param subscriptionId string
+
+var tenantId = subscription().tenantId
 
 resource azureAccount 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
   name: 'cs-account-deployment'
@@ -12,7 +15,7 @@ resource azureAccount 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
     azPowerShellVersion: '10.0'
     cleanupPreference: 'OnSuccess'
     retentionInterval: 'PT1H'
-    arguments: '-clientId ${falconClientId} -clientSecret ${falconClientSecret} -appRegistrationId ${appRegistration} -tenantId ${tenant().tenantId} -subscriptionId ${subscription().subscriptionId}'
+    arguments: '-clientId ${falconClientId} -clientSecret ${falconClientSecret} -appRegistrationId ${appRegistration} -tenantId ${tenantId} -subscriptionId ${subscriptionId}'
     scriptContent: '''
       param(
         [string] $clientId,
@@ -52,8 +55,16 @@ resource azureAccount 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
     try 
     {
       # Create Azure Account in Falcon Horizon
-      New-FalconHorizonAzureAccount -subscriptionId $subscriptionId -TenantId $tenantId -ClientId $appRegistrationId
-    }
+      $test =  $null
+      if ($test -ne $null) 
+      {
+        Write-Output "Azure account already exists in Falcon Horizon"
+      }
+      else 
+      {
+        New-FalconHorizonAzureAccount -subscriptionId $subscriptionId -TenantId $tenantId -ClientId $appRegistrationId
+      }
+   }
     catch 
     {
       Write-Error "Failed to create Azure account in Falcon Horizon: $_"

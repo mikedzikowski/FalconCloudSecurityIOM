@@ -1,5 +1,7 @@
 {
     "$schema": "<relative path to createFormUI.schema.json>",
+    "handler": "Microsoft.Azure.CreateUIDef",
+    "version": "0.1.2-preview",
     "view": {
         "kind": "Form",
         "properties": {
@@ -22,137 +24,204 @@
                     ]
                 },
                 {
-                    "name": "managedIdentity",
-                    "label": "Managed Identity",
+                    "name": "iom",
+                    "label": "Enable IOM (Indiactors of Misconfiguration)",
                     "elements": [
                         {
-                            "name": "managedIdentity",
-                            "type": "Microsoft.Solutions.ResourceSelector",
-                            "label": "Select user assigned identity",
-                            "resourceType": "Microsoft.ManagedIdentity/userAssignedIdentities",
-                            "options": {
-                                "filter": {
-                                    "subscription": "onBasics",
-                                    "location": "onBasics"
-                                }
-                            }
-                        }
-                    ]
-                },
-                {
-                    "name": "sp",
-                    "label": "Service Principal",
-                    "elements": [
-                        {
-                            "name": "newSpinfo",
-                            "type": "Microsoft.Common.TextBlock",
+                            "name": "iomDeployment",
+                            "label": "Deployment Option",
+                            "type": "Microsoft.Common.Section",
                             "visible": true,
-                            "options": {
-                                "text": "NOTE: If selected a new service principal may be created for you. Please take note of the password when following the wizard.",
-                                "link": {
-                                    "label": "Learn more",
-                                    "uri": "https://learn.microsoft.com/en-us/cli/azure/azure-cli-sp-tutorial-2"
+                            "elements": [
+                                {
+                                    "name": "enable",
+                                    "type": "Microsoft.Common.CheckBox",
+                                    "label": "Enable Indicators of Misconfiguration",
+                                    "defaultValue": false,
+                                    "visible": true
+                                },
+                                {
+                                    "name": "sp",
+                                    "type": "Microsoft.Common.ServicePrincipalSelector",
+                                    "visible": "[equals(steps('iom').iomDeployment.enable, true)]",
+                                    "label": {
+                                        "password": "Password",
+                                        "authenticationType": "Authentication Type",
+                                        "sectionHeader": "Service Principal"
+                                    },
+                                    "toolTip": {
+                                        "password": "Password",
+                                        "authenticationType": "Authentication Type"
+                                    },
+                                    "defaultValue": {
+                                        "principalId": "<default guid>",
+                                        "name": "<default name>"
+                                    },
+                                    "options": {
+                                        "hideCertificate": true
+                                    }
+                                },
+                                {
+                                    "name": "managedIdentity",
+                                    "type": "Microsoft.Solutions.ResourceSelector",
+                                    "label": "Select user assigned identity",
+                                    "visible": "[equals(steps('iom').iomDeployment.enable, true)]",
+                                    "resourceType": "Microsoft.ManagedIdentity/userAssignedIdentities",
+                                    "options": {
+                                        "filter": {
+                                            "subscription": "onBasics",
+                                            "location": "onBasics"
+                                        }
+                                    }
+                                },
+                                {
+                                    "name": "exemption",
+                                    "type": "Microsoft.Common.EditableGrid",
+                                    "ariaLabel": "Enter the policy IDs to exempt to during the deployment of Falcon Cloud Security Posture Management",
+                                    "defaultValue": [],
+                                    "visible": "[equals(steps('iom').iomDeployment.enable, true)]",
+                                    "label": "Policy Exemptions",
+                                    "constraints": {
+                                        "width": "Full",
+                                        "rows": {
+                                            "count": {
+                                                "min": 0,
+                                                "max": 100
+                                            }
+                                        },
+                                        "columns": [
+                                            {
+                                                "id": "id",
+                                                "header": "Policy Assignment Resource IDs for Exemption",
+                                                "toolTip": "Enter the policy assignment resource IDs to exempt during the deployment of Falcon Cloud Security Posture Management deployment",
+                                                "width": "1fr",
+                                                "element": {
+                                                    "type": "Microsoft.Common.TextBox",
+                                                    "placeholder": "",
+                                                    "constraints": {
+                                                        "required": true,
+                                                        "validations": []
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
                                 }
-                            }
-                        },
-                        {
-                            "name": "existingSpinfo",
-                            "type": "Microsoft.Common.TextBlock",
-                            "visible": true,
-                            "options": {
-                                "text": "NOTE: When using an existing service principal, please ensure the proper roles has been applied and please have the password available or create a new password.",
-                                "link": {
-                                    "label": "Learn more",
-                                    "uri": "https://learn.microsoft.com/en-us/cli/azure/azure-cli-sp-tutorial-7?tabs=bash#reset-credentials-returning-output-to-the-console-and-log-file"
-                                }
-                            }
-                        },
-                        {
-                            "name": "ServicePrincipal",
-                            "type": "Microsoft.Common.ServicePrincipalSelector",
-                            "label": {
-                                "password": "Password",
-                                "authenticationType": "Authentication Type",
-                                "sectionHeader": "Service Principal"
-                            },
-                            "toolTip": {
-                                "password": "Password",
-                                "authenticationType": "Authentication Type"
-                            },
-                            "defaultValue": {
-                                "principalId": "<default guid>",
-                                "name": "<default name>"
-                            },
-                            "constraints": {
-                                "required": false
-                            },
-                            "options": {
-                                "hideCertificate": true
-                            },
-                            "visible": true
+                            ]
                         }
                     ]
                 },
                 {
-                    "name": "fcsIOA",
-                    "label": "Enable IOA (Indiactors of Attack)",
+                    "name": "ioa",
+                    "label": "Enable IOAs (Indiactors of Attack)",
                     "elements": [
                         {
-                            "name": "fcsIOA",
-                            "type": "Microsoft.Common.CheckBox",
-                            "label": "Enable Indicators of Attack",
-                            "defaultValue": false,
-                            "visible": true
+                            "name": "ioaDeployment",
+                            "label": "Deployment Option",
+                            "type": "Microsoft.Common.Section",
+                            "visible": true,
+                            "elements": [
+                                {
+                                    "name": "enable",
+                                    "type": "Microsoft.Common.CheckBox",
+                                    "label": "Enable Indicators of Attack",
+                                    "defaultValue": false,
+                                    "visible": true
+                                },
+                                {
+                                    "name": "enableAppInsights",
+                                    "type": "Microsoft.Common.CheckBox",
+                                    "label": "Enable Application Insights",
+                                    "constraints": {
+                                        "required": false
+                                    },
+                                    "visible": "[steps('ioa').ioaDeployment.enable]"
+
+                                },
+                                {
+                                    "name": "deployActivityLogDiagnosticSettings",
+                                    "type": "Microsoft.Common.CheckBox",
+                                    "label": "Deploy Activity Log Diagnostic Settings (current Subscription)",
+                                    "constraints": {
+                                        "required": false
+                                    },
+                                    "visible": "[steps('ioa').ioaDeployment.enable]"
+                                },
+                                {
+                                    "name": "deployEntraLogDiagnosticSettings",
+                                    "type": "Microsoft.Common.CheckBox",
+                                    "label": "Deploy Entra ID Log Diagnostic Settings",
+                                    "constraints": {
+                                        "required": false
+                                    },
+                                    "visible": "[steps('ioa').ioaDeployment.enable]"
+                                }
+                            ]
                         }
                     ]
                 },
                 {
-                    "name": "falcon",
+                    "name": "falconCloudSecurity",
                     "label": "Falcon Cloud Security Information",
                     "elements": [
                         {
-                            "name": "information",
-                            "type": "Microsoft.Common.InfoBox",
+                            "name": "credentials",
+                            "label": "Credentials",
+                            "type": "Microsoft.Common.Section",
                             "visible": true,
-                            "options": {
-                                "icon": "None",
-                                "text": "Please enter your Falcon Client ID and Client Secret. If you do not have a Falcon CLient ID, please contact your Falcon administrator. For more information, see <a href='https://falcon.crowdstrike.com' target='_blank'>here</a>.",
-                                "uri": "https://falcon.crowdstrike.com"
-                            }
-                        },
-                        {
-                            "name": "cid",
-                            "type": "Microsoft.Common.TextBox",
-                            "label": "Falcon Client ID",
-                            "defaultValue": "",
-                            "toolTip": "Use only allowed characters",
-                            "placeholder": "",
-                            "multiLine": false,
-                            "constraints": {
-                                "required": true,
-                                "validations": [
-                                    {}
-                                ]
-                            },
-                            "visible": true
-                        },
-                        {
-                            "name": "secret",
-                            "type": "Microsoft.Common.PasswordBox",
-                            "label": {
-                                "password": "Falcon Client Secret"
-                            },
-                            "toolTip": "",
-                            "constraints": {
-                                "required": true,
-                                "validations": [
-                                    {}
-                                ]
-                            },
-                            "options": {
-                                "hideConfirmation": true
-                            },
-                            "visible": true
+                            "elements": [
+                                {
+                                    "name": "falconClientId",
+                                    "type": "Microsoft.Common.TextBox",
+                                    "label": "Falcon Client Id",
+                                    "defaultValue": "",
+                                    "toolTip": "Use only allowed characters",
+                                    "placeholder": "",
+                                    "multiLine": false,
+                                    "constraints": {
+                                        "required": true,
+                                        "regex": "^[0-9a-fA-F]{32}$",
+                                        "validationMessage": "Falcon Client ID is invalid. Please re-enter."
+                                    },
+                                    "visible": true
+                                },
+                                {
+                                    "name": "falconClientSecret",
+                                    "type": "Microsoft.Common.PasswordBox",
+                                    "label": {
+                                        "password": "Falcon Client Secret"
+                                    },
+                                    "toolTip": "",
+                                    "constraints": {
+                                        "required": true,
+                                        "regex": "\\w{40}$",
+                                        "validations": [
+                                            {}
+                                        ]
+                                    },
+                                    "options": {
+                                        "hideConfirmation": true
+                                    },
+                                    "visible": true
+                                },
+                                {
+                                    "name": "falconCID",
+                                    "type": "Microsoft.Common.PasswordBox",
+                                    "label": {
+                                        "password": "Falcon CID"
+                                    },
+                                    "toolTip": "",
+                                    "constraints": {
+                                        "required": true,
+                                        "regex": "^[0-9a-fA-F]{32}$",
+                                        "validationMessage": "Falcon CID is invalid. Please re-enter."
+                                    },
+                                    "options": {
+                                        "hideConfirmation": true
+                                    },
+                                    "visible": "[steps('ioa').ioaDeployment.enable]"
+                                }
+                            ]
                         }
                     ]
                 },
@@ -177,11 +246,18 @@
             "subscriptionId": "[steps('basics').resourceScope.subscription.id]",
             "location": "[steps('basics').resourceScope.location.name]",
             "parameters": {
+                "appRegistrationAppId": "[steps('iom').iomDeployment.sp.appId]",
+                "deployActivityLogDiagnosticSettings": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('ioa').ioaDeployment.deployActivityLogDiagnosticSettings, false)]",
+                "deployEntraLogDiagnosticSettings": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('ioa').ioaDeployment.deployEntraLogDiagnosticSettings, false)]",
+                "deployIOA": "[steps('ioa').ioaDeployment.enable]",
+                "deployIOM": "[steps('iom').iomDeployment.enable]",
+                "enableAppInsights": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('ioa').ioaDeployment.enableAppInsights, false)]",  
+                "falconCID": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('falconCloudSecurity').credentials.falconCID,'')]",
+                "falconClientId": "[steps('falconCloudSecurity').credentials.falconClientId]",
+                "falconClientSecret": "[steps('falconCloudSecurity').credentials.falconClientSecret]",
                 "tagsByResource": "[steps('tags').tagsByResource]",
-                "appRegistrationAppId": "[steps('sp').ServicePrincipal.appId]",
-                "falconClientId": "[steps('falcon').cid]",
-                "falconClientSecret": "[steps('falcon').secret]",
-                "uamiName": "[steps('managedIdentity').managedIdentity.name]"
+                "uamiName": "[steps('iom').iomDeployment.managedIdentity.name]",
+                "uamiResourceId": "[steps('iom').iomDeployment.managedIdentity.id]"
             }
         }
     }

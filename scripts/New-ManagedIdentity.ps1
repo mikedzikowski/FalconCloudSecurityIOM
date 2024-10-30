@@ -5,8 +5,8 @@
 $TenantId = ''
 
 # The name of your web app, which has a managed identity.
-$webAppName = "cs-mi" 
-$resourceGroupName = "rg-cs-cspm"
+$webAppName = "" 
+$resourceGroupName = ""
 
 # The name of the app role that the managed identity should be assigned to.
 $appRoleName = "Application.ReadWrite.All"
