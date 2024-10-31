@@ -259,7 +259,7 @@
                                       ],
                                       "required": true
                                     },
-                                    "visible": true
+                                    "visible": "[steps('ioa').ioaDeployment.enable]"
                                   }
                             ]
                         }

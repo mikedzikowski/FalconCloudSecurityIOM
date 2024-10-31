@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "350043398291913024"
+      "templateHash": "6838278286592925811"
     }
   },
   "parameters": {
@@ -112,7 +112,6 @@
     },
     "falconCloudRegion": {
       "type": "string",
-      "defaultValue": "US-1",
       "allowedValues": [
         "US-1",
         "US-2",
