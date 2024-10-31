@@ -225,7 +225,42 @@
                                         "hideConfirmation": true
                                     },
                                     "visible": "[steps('ioa').ioaDeployment.enable]"
-                                }
+                                },
+                                {
+                                    "name": "region",
+                                    "type": "Microsoft.Common.DropDown",
+                                    "label": "Falcon Cloud Region",
+                                    "placeholder": "",
+                                    "defaultValue": ["Value two"],
+                                    "toolTip": "",
+                                    "multiselect": false,
+                                    "selectAll": false,
+                                    "filter": false,
+                                    "filterPlaceholder": "Filter items ...",
+                                    "multiLine": false,
+                                    "defaultDescription": "A value for selection",
+                                    "constraints": {
+                                      "allowedValues": [
+                                        {
+                                          "label": "US-1",
+                                          "description": "US-1 Region",
+                                          "value": "US-1"
+                                        },
+                                        {
+                                          "label": "US-2",
+                                          "description": "US-2 Region",
+                                          "value": "US-2"
+                                        },
+                                        {
+                                        "label": "EU-1",
+                                        "description": "EU-1 Region",
+                                        "value": "EU-1"
+                                        }
+                                      ],
+                                      "required": true
+                                    },
+                                    "visible": true
+                                  }
                             ]
                         }
                     ]
@@ -261,13 +296,14 @@
                 "deployIOA": "[steps('ioa').ioaDeployment.enable]",
                 "deployIOM": "[steps('iom').iomDeployment.enable]",
                 "enableAppInsights": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('ioa').ioaDeployment.enableAppInsights, false)]",  
+                "exemptPolicyAssignmentIds": "[if(equals(steps('iom').iomDeployment.enable, true), map(steps('iom').identity.exemption, (item) => item.id), '')]",
                 "falconCID": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('falconCloudSecurity').credentials.falconCID,'')]",
                 "falconClientId": "[steps('falconCloudSecurity').credentials.falconClientId]",
                 "falconClientSecret": "[steps('falconCloudSecurity').credentials.falconClientSecret]",
+                "falconCloudRegion": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('falconCloudSecurity').credentials.region,'US-1')]",
                 "tagsByResource": "[steps('tags').tagsByResource]",
                 "uamiName": "[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.managedIdentity.name, '')]",
-                "uamiResourceId": "[[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.managedIdentity.id, '')]",
-                "exemptPolicyAssignmentIds": "[if(equals(steps('iom').iomDeployment.enable, true), map(steps('iom').identity.exemption, (item) => item.id), '')]"
+                "uamiResourceId": "[[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.managedIdentity.id, '')]"
             }
         }
     }
