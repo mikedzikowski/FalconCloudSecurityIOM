@@ -36,7 +36,7 @@
                                     "name": "enable",
                                     "type": "Microsoft.Common.CheckBox",
                                     "label": "Enable Indicators of Misconfiguration",
-                                    "defaultValue": false,
+                                    "defaultValue": true,
                                     "visible": true
                                 }
                             ]
@@ -303,7 +303,7 @@
                 "falconCloudRegion": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('falconCloudSecurity').credentials.region,'US-1')]",
                 "tagsByResource": "[steps('tags').tagsByResource]",
                 "uamiName": "[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.managedIdentity.name, '')]",
-                "uamiResourceId": "[[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.managedIdentity.id, '')]"
+                "uamiResourceId": "[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.managedIdentity.id, '')]"
             }
         }
     }
