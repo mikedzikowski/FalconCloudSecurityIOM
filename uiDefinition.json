@@ -106,17 +106,17 @@
                                     "name": "targetScope",
                                     "type": "Microsoft.Common.OptionsGroup",
                                     "label": "Target Scope",
-                                    "defaultValue": "Target Subscription",
+                                    "defaultValue": "Subscription",
                                     "toolTip": "Select whether you would like to target a management group or a subscription.",
                                     "visible": true,
                                     "constraints": {
                                         "allowedValues": [
                                             {
-                                                "label": "Target Management Group",
+                                                "label": "Management Group",
                                                 "value": true
                                             },
                                             {
-                                                "label": "Target Subscription",
+                                                "label": "Subscription",
                                                 "value": false
                                             }
                                         ],
