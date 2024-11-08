@@ -92,7 +92,7 @@
                         },
                         {
                             "name": "selectTarget",
-                            "label": "Select Subscription(s)",
+                            "label": "Select Scope",
                             "type": "Microsoft.Common.Section",
                             "elements": [
                                 {
