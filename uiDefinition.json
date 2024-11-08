@@ -1,7 +1,6 @@
 {
     "$schema": "<relative path to createFormUI.schema.json>",
     "handler": "Microsoft.Azure.CreateUIDef",
-    "version": "0.1.2-preview",
     "view": {
         "kind": "Form",
         "properties": {
@@ -10,16 +9,160 @@
             "steps": [
                 {
                     "name": "basics",
-                    "label": "Basics",
+                    "label": "Deployment settings",
                     "elements": [
                         {
+                            "name": "cloudEnvironment",
+                            "type": "Microsoft.Common.Section",
+                            "label": "Select cloud environment",
+                            "elements": [
+                                {
+                                    "name": "selection",
+                                    "type": "Microsoft.Common.DropDown",
+                                    "visible": true,
+                                    "label": "Azure cloud environment",
+                                    "defaultValue": "[if(contains(steps('basics').resourceScope.location.name, 'china'), 'Azure China Cloud', if(contains(steps('basics').resourceScope.location.name, 'usgov'), 'Azure US Government', if(contains(steps('basics').resourceScope.location.name, 'usdod'), 'Azure US Government', 'Azure Cloud')))]",
+                                    "multiselect": false,
+                                    "selectAll": false,
+                                    "filter": false,
+                                    "multiLine": true,
+                                    "toolTip": "Select your target Azure cloud environment.",
+                                    "constraints": {
+                                        "allowedValues": [
+                                            {
+                                                "label": "Azure Cloud",
+                                                "value": "AzureCloud"
+                                            },
+                                            {
+                                                "label": "Azure China Cloud",
+                                                "value": "AzureChinaCloud"
+                                            },
+                                            {
+                                                "label": "Azure US Government",
+                                                "value": "AzureUSGovernment"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "name": "warning",
+                                    "type": "Microsoft.Common.InfoBox",
+                                    "visible": true,
+                                    "options": {
+                                        "icon": "Warning",
+                                        "text": "This value should be automatically set based on the list of available locations. Only change this if you believe the value to be incorrect.",
+                                        "uri": "https://docs.microsoft.com/en-us/cli/azure/manage-clouds-azure-cli"
+                                    }
+                                }
+                            ]
+                        },
+                        {
                             "name": "resourceScope",
-                            "type": "Microsoft.Common.ResourceScope",
-                            "location": {
-                                "resourceTypes": [
-                                    "microsoft.resources/resourcegroups"
-                                ]
+                            "type": "Microsoft.Common.ResourceScope"
+                        },
+                        {
+                            "name": "getSubscriptions",
+                            "type": "Microsoft.Solutions.ArmApiControl",
+                            "request": {
+                                "method": "POST",
+                                "path": "providers/Microsoft.ResourceGraph/resources?api-version=2021-03-01",
+                                "body": {
+                                    "query": "ResourceContainers | where type =~ 'microsoft.resources/subscriptions' | where properties.state =~ 'enabled' | project label=tostring(name), description=subscriptionId, value=subscriptionId | order by label asc"
+                                }
                             }
+                        },
+                        {
+                            "name": "getManagementGroups",
+                            "type": "Microsoft.Solutions.ArmApiControl",
+                            "request": {
+                                "method": "POST",
+                                "path": "providers/Microsoft.ResourceGraph/resources?api-version=2021-03-01",
+                                "body": {
+                                    "query": "ResourceContainers | where type =~ 'microsoft.management/managementgroups' | project label=tostring(name), description=id, value=id | order by label asc"
+                                }
+                            }
+                        },
+                        {
+                            "name": "getLocations",
+                            "type": "Microsoft.Solutions.ArmApiControl",
+                            "request": {
+                                "method": "GET",
+                                "path": "locations?api-version=2019-11-01"
+                            }
+                        },
+                        {
+                            "name": "selectSubscriptions",
+                            "label": "Select Subscription(s)",
+                            "type": "Microsoft.Common.Section",
+                            "elements": [
+                                {
+                                    "name": "subscriptionDetailsText",
+                                    "type": "Microsoft.Common.TextBlock",
+                                    "options": {
+                                        "text": "Please select a target managementGroup and subscription to target for the Falcon Cloud Security Deployment."
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "selectManagementGroup",
+                            "label": "Select Management Group",
+                            "type": "Microsoft.Common.Section",
+                            "elements": [
+                                {
+                                    "name": "managementGroupDetailsText",
+                                    "type": "Microsoft.Common.TextBlock",
+                                    "options": {
+                                        "text": "Please select a management group for the Falcon Cloud Security Deployment."
+                                    }
+                                },
+                                {
+                                    "name": "managementGroupId",
+                                    "label": "Management Group",
+                                    "type": "Microsoft.Common.DropDown",
+                                    "defaultValue": "",
+                                    "toolTip": "Select the Management Group for your Falcon Cloud Security deployment.",
+                                    "multiselect": false,
+                                    "selectAll": false,
+                                    "filter": true,
+                                    "filterPlaceholder": "Filter items ...",
+                                    "multiLine": true,
+                                    "constraints": {
+                                        "allowedValues": "[steps('basics').getManagementGroups.data]",
+                                        "required": true
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "defaultSubscription",
+                            "label": "Default Subscription",
+                            "type": "Microsoft.Common.Section",
+                            "elements": [
+                                {
+                                    "name": "defaultSubscriptionTextBlock",
+                                    "type": "Microsoft.Common.TextBlock",
+                                    "options": {
+                                        "text": "All resources will be deployed to this subscription."
+                                    }
+                                },
+                                {
+                                    "name": "defaultSubscriptionId",
+                                    "label": "Default Subscription",
+                                    "type": "Microsoft.Common.DropDown",
+                                    "defaultValue": "[parse('[]')]",
+                                    "toolTip": "Select the Subscription for your Falcon Cloud Security deployment.",
+                                    "multiselect": false,
+                                    "selectAll": false,
+                                    "filter": true,
+                                    "filterPlaceholder": "Filter items ...",
+                                    "multiLine": true,
+                                    "constraints": {
+                                        "allowedValues": "[steps('basics').getSubscriptions.data]",
+                                        "required": true
+                                    }
+                                }
+                            ]
                         }
                     ]
                 },
@@ -45,7 +188,7 @@
                             "name": "identity",
                             "type": "Microsoft.Common.Section",
                             "visible": "[steps('iom').iomDeployment.enable]",
-                            "elements" : [
+                            "elements": [
                                 {
                                     "name": "sp",
                                     "type": "Microsoft.Common.ServicePrincipalSelector",
@@ -74,10 +217,7 @@
                                     "visible": "[equals(steps('iom').iomDeployment.enable, true)]",
                                     "resourceType": "Microsoft.ManagedIdentity/userAssignedIdentities",
                                     "options": {
-                                        "filter": {
-                                            "subscription": "onBasics",
-                                            "location": "onBasics"
-                                        }
+                                        "filter": {}
                                     }
                                 },
                                 {
@@ -141,7 +281,6 @@
                                         "required": false
                                     },
                                     "visible": "[steps('ioa').ioaDeployment.enable]"
-
                                 },
                                 {
                                     "name": "deployActivityLogDiagnosticSettings",
@@ -231,7 +370,9 @@
                                     "type": "Microsoft.Common.DropDown",
                                     "label": "Falcon Cloud Region",
                                     "placeholder": "",
-                                    "defaultValue": ["Value two"],
+                                    "defaultValue": [
+                                        "Value two"
+                                    ],
                                     "toolTip": "",
                                     "multiselect": false,
                                     "selectAll": false,
@@ -240,27 +381,27 @@
                                     "multiLine": false,
                                     "defaultDescription": "A value for selection",
                                     "constraints": {
-                                      "allowedValues": [
-                                        {
-                                          "label": "US-1",
-                                          "description": "US-1 Region",
-                                          "value": "US-1"
-                                        },
-                                        {
-                                          "label": "US-2",
-                                          "description": "US-2 Region",
-                                          "value": "US-2"
-                                        },
-                                        {
-                                        "label": "EU-1",
-                                        "description": "EU-1 Region",
-                                        "value": "EU-1"
-                                        }
-                                      ],
-                                      "required": true
+                                        "allowedValues": [
+                                            {
+                                                "label": "US-1",
+                                                "description": "US-1 Region",
+                                                "value": "US-1"
+                                            },
+                                            {
+                                                "label": "US-2",
+                                                "description": "US-2 Region",
+                                                "value": "US-2"
+                                            },
+                                            {
+                                                "label": "EU-1",
+                                                "description": "EU-1 Region",
+                                                "value": "EU-1"
+                                            }
+                                        ],
+                                        "required": true
                                     },
                                     "visible": "[steps('ioa').ioaDeployment.enable]"
-                                  }
+                                }
                             ]
                         }
                     ]
@@ -286,8 +427,7 @@
             ]
         },
         "outputs": {
-            "kind": "Subscription",
-            "subscriptionId": "[steps('basics').resourceScope.subscription.id]",
+            "kind": "Tenant",
             "location": "[steps('basics').resourceScope.location.name]",
             "parameters": {
                 "appRegistrationAppId": "[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.sp.appId, '')]",
@@ -295,7 +435,7 @@
                 "deployEntraLogDiagnosticSettings": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('ioa').ioaDeployment.deployEntraLogDiagnosticSettings, false)]",
                 "deployIOA": "[steps('ioa').ioaDeployment.enable]",
                 "deployIOM": "[steps('iom').iomDeployment.enable]",
-                "enableAppInsights": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('ioa').ioaDeployment.enableAppInsights, false)]",  
+                "enableAppInsights": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('ioa').ioaDeployment.enableAppInsights, false)]",
                 "exemptPolicyAssignmentIds": "[if(equals(steps('iom').iomDeployment.enable, true), map(steps('iom').identity.exemption, (item) => item.id), '')]",
                 "falconCID": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('falconCloudSecurity').credentials.falconCID,'')]",
                 "falconClientId": "[steps('falconCloudSecurity').credentials.falconClientId]",
