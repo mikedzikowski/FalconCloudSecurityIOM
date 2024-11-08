@@ -1,0 +1,61 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": ""
+    },
+    "deploymentNameSuffix": {
+      "value": ""
+    },
+    "deploymentNamePrefix": {
+      "value": ""
+    },
+    "iomResourceGroupName": {
+      "value": ""
+    },
+    "ioaResourceGroupName": {
+      "value": ""
+    },
+    "falconClientId": {
+      "value": ""
+    },
+    "falconClientSecret": {
+      "value": ""
+    },
+    "falconCID": {
+      "value": ""
+    },
+    "appRegistrationAppId": {
+      "value": ""
+    },
+    "tags": {
+      "value": {}
+    },
+    "uamiName": {
+      "value": ""
+    },
+    "uamiResourceId": {
+      "value": ""
+    },
+    "deployIOA": {
+      "value": false
+    },
+    "deployIOM": {
+      "value": false
+    },
+    "randomSuffix": {
+      "value": ""
+    },
+    "exemptPolicyAssignmentIds": {
+      "value": []
+    },
+    "falconCloudRegion": {},
+    "deployActivityLogDiagnosticSettings": {
+      "value": false
+    },
+    "deployEntraLogDiagnosticSettings": {
+      "value": false
+    }
+  }
+}

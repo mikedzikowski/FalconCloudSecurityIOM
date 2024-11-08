@@ -91,15 +91,36 @@
                             }
                         },
                         {
-                            "name": "selectSubscriptions",
+                            "name": "selectTarget",
                             "label": "Select Subscription(s)",
                             "type": "Microsoft.Common.Section",
                             "elements": [
                                 {
-                                    "name": "subscriptionDetailsText",
+                                    "name": "TargetDetailsText",
                                     "type": "Microsoft.Common.TextBlock",
                                     "options": {
                                         "text": "Please select a target managementGroup and subscription to target for the Falcon Cloud Security Deployment."
+                                    }
+                                },
+                                {
+                                    "name": "targetScope",
+                                    "type": "Microsoft.Common.OptionsGroup",
+                                    "label": "Target Scope",
+                                    "defaultValue": "Target Subscription",
+                                    "toolTip": "Select whether you would like to target a management group or a subscription.",
+                                    "visible": true,
+                                    "constraints": {
+                                        "allowedValues": [
+                                            {
+                                                "label": "Target Management Group",
+                                                "value": true
+                                            },
+                                            {
+                                                "label": "Target Subscription",
+                                                "value": false
+                                            }
+                                        ],
+                                        "required": true
                                     }
                                 }
                             ]
@@ -108,6 +129,7 @@
                             "name": "selectManagementGroup",
                             "label": "Select Management Group",
                             "type": "Microsoft.Common.Section",
+                            "visible": "[equals(steps('basics').selectTarget.targetScope, true)]",
                             "elements": [
                                 {
                                     "name": "managementGroupDetailsText",
@@ -431,6 +453,7 @@
             "location": "[steps('basics').resourceScope.location.name]",
             "parameters": {
                 "appRegistrationAppId": "[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.sp.appId, '')]",
+                "appRegistationObjectId": "[if(equals(steps('iom').iomDeployment.enable, true), first(steps('iom').identity.sp.objectId), '')]",
                 "deployActivityLogDiagnosticSettings": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('ioa').ioaDeployment.deployActivityLogDiagnosticSettings, false)]",
                 "deployEntraLogDiagnosticSettings": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('ioa').ioaDeployment.deployEntraLogDiagnosticSettings, false)]",
                 "deployIOA": "[steps('ioa').ioaDeployment.enable]",
@@ -443,7 +466,9 @@
                 "falconCloudRegion": "[if(equals(steps('ioa').ioaDeployment.enable, true), steps('falconCloudSecurity').credentials.region,'US-1')]",
                 "tagsByResource": "[steps('tags').tagsByResource]",
                 "uamiName": "[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.managedIdentity.name, '')]",
-                "uamiResourceId": "[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.managedIdentity.id, '')]"
+                "uamiResourceId": "[if(equals(steps('iom').iomDeployment.enable, true), steps('iom').identity.managedIdentity.id, '')]",
+                "managementGroupId": "[if(equals(steps('basics').selectTarget.targetScope, true), steps('basics').selectManagementGroup.managementGroupId, '')]",
+                "defaultSubscriptionId": "[steps('basics').defaultSubscription.defaultSubscriptionId]"
             }
         }
     }
